@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"path"
 	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -26,18 +27,17 @@ func serveMusic(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	port := flag.Int("port", 8080, "The port on which to bind the server")
-	dbName := flag.String("dbFile", "./db/library.db", "The db file to use")
 	flag.Parse()
 	portString := ":" + strconv.Itoa(*port)
 
-	db := createDb(*dbName)
+	db := createDb()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "frontend/resources/public/index.html")
 	})
-	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(resourcesLoc+"css"))))
-	http.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(resourcesLoc+"img"))))
-	http.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(resourcesLoc+"js"))))
+	http.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(path.Join(resourcesLoc, "css")))))
+	http.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
+	http.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
 	http.HandleFunc("/stream", serveMusic(db))
 
 	err := http.ListenAndServe(portString, nil)
