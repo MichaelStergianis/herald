@@ -16,8 +16,7 @@ CREATE TABLE albums (
 
        album_size INTEGER NOT NULL,
        title VARCHAR NOT NULL,
-       duration INTERVAL HOUR TO SECOND
-
+       duration INTERVAL DAY TO SECOND
 );
 
 CREATE TABLE songs (
@@ -29,7 +28,7 @@ CREATE TABLE songs (
        title VARCHAR NOT NULL,
        song_size INTEGER NOT NULL,
        artist VARCHAR,
-       duration INTERVAL HOUR TO SECOND
+       duration INTERVAL DAY TO SECOND
 );
 
 CREATE TABLE libraries (

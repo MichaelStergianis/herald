@@ -3,14 +3,30 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
 	// pq uses golang sql
 	_ "github.com/lib/pq"
 )
 
+type Duration time.Duration
+
 type library struct {
 	name string
 	path string
+}
+
+type artist struct {
+	name string
+}
+
+type album struct {
+	artist    artist
+	albumSize int
+	title     string
+	duration  Duration
 }
 
 type song struct {
@@ -58,6 +74,13 @@ func getLibraries(db *sql.DB) []library {
 	return libraries
 }
 
-func scanLibrary(db *sql.DB, lib library) {
+func isMusic(f os.File) bool {
+	return false
+}
 
+func scanLibrary(db *sql.DB, lib library) {
+	stub := func(path string, info os.FileInfo, err error) error {
+		return nil
+	}
+	filepath.Walk(lib.path, stub)
 }
