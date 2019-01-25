@@ -9,14 +9,25 @@ CREATE TABLE genres (
        genre_name VARCHAR NOT NULL
 );
 
+CREATE TABLE images (
+       id SERIAL PRIMARY KEY,
+       file_path VARCHAR NOT NULL
+);
+
 CREATE TABLE albums (
        id SERIAL PRIMARY KEY,
 
        artist INTEGER REFERENCES artists(id),
 
-       album_size INTEGER NOT NULL,
+       release_year INTEGER,
+       n_tracks INTEGER NOT NULL, -- number of songs
        title VARCHAR NOT NULL,
-       duration INTERVAL DAY TO SECOND
+);
+
+CREATE TABLE images_in_album (
+       album_id REFERENCES albums(id),
+       image_id REFERENCES images(id)
+       primary_image BOOLEAN NOT NULL
 );
 
 CREATE TABLE songs (
@@ -26,9 +37,9 @@ CREATE TABLE songs (
 
        fs_path VARCHAR UNIQUE NOT NULL,
        title VARCHAR NOT NULL,
-       song_size INTEGER NOT NULL,
+       song_size INTEGER NOT NULL, -- bytes
        artist VARCHAR,
-       duration INTERVAL DAY TO SECOND
+       duration INTEGER NOT NULL -- seconds
 );
 
 CREATE TABLE libraries (

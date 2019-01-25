@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 
@@ -32,6 +33,29 @@ func main() {
 
 	db := createDb()
 
+	rows, err := db.Query("select * from songs;")
+	check(err)
+	defer rows.Close()
+
+	fmt.Println(rows.Err())
+
+	if rows.NextResultSet() {
+		fmt.Println("More results")
+	}
+
+	for rows.Next() {
+		var s song
+		var id int
+		var albumId int
+		var path string
+		rows.Scan(&id, &albumId, &path, &s.title)
+		fmt.Println()
+	}
+
+	fmt.Println(rows.Err())
+
+	os.Exit(0)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "frontend/resources/public/index.html")
 	})
@@ -40,7 +64,7 @@ func main() {
 	http.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
 	http.HandleFunc("/stream", serveMusic(db))
 
-	err := http.ListenAndServe(portString, nil)
+	err = http.ListenAndServe(portString, nil)
 	check(err)
 	return
 }
