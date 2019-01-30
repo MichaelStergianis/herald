@@ -2,13 +2,14 @@ package db
 
 import "testing"
 
-// TestCreateDb ...
-func TestCreateDb(t *testing.T) {
+// TestNew ...
+// Tests creation of a HeraldDB type.
+func TestNew(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 
-	hdb := CreateDb()
+	hdb := New()
 	if hdb == nil {
 		t.Fail()
 	}
