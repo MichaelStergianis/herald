@@ -139,9 +139,10 @@ func addMusicFile(db *sql.DB, path string) {
 // checkAlbum ...
 // checks if the album exists in the database
 func checkAlbum(db *sql.DB, albm album) (isIn bool) {
-	stmt, err := db.Prepare("SELECT COUNT(*) FROM ")
+	stmt, err := db.Prepare("SELECT COUNT(*) FROM music.albums WHERE music.albums.title = ?;")
 	check(err)
 
+	return false
 }
 
 // addAlbum ...
