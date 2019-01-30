@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS music.albums (
 );
 
 CREATE TABLE IF NOT EXISTS music.images_in_album (
-       album_id REFERENCES music.albums(id),
-       image_id REFERENCES music.images(id)
+       album_id INTEGER REFERENCES music.albums(id),
+       image_id INTEGER REFERENCES music.images(id),
        primary_image BOOLEAN NOT NULL
 );
 
