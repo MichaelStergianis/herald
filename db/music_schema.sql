@@ -3,12 +3,12 @@ CREATE SCHEMA IF NOT EXISTS music;
 
 CREATE TABLE IF NOT EXISTS music.artists (
        id SERIAL PRIMARY KEY,
-       artist_name VARCHAR NOT NULL
+       name VARCHAR NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS music.genres (
        id SERIAL PRIMARY KEY,
-       genre_name VARCHAR NOT NULL
+       name VARCHAR NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS music.images (
@@ -40,13 +40,13 @@ CREATE TABLE IF NOT EXISTS music.songs (
        fs_path VARCHAR UNIQUE NOT NULL,
        title VARCHAR NOT NULL,
        song_size INTEGER NOT NULL, -- bytes
-       artist VARCHAR,
-       duration INTEGER NOT NULL   -- seconds
+       duration INTEGER NOT NULL,   -- seconds
+       artist VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS music.libraries (
        id SERIAL PRIMARY KEY,
-       library_name VARCHAR UNIQUE NOT NULL,
+       name VARCHAR UNIQUE NOT NULL,
        fs_path VARCHAR NOT NULL
 );
 
