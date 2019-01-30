@@ -49,13 +49,22 @@ type Library struct {
 // Artist ...
 // A representation of an artist.
 type Artist struct {
+	ID   int
+	Name string
+}
+
+// Genre ...
+// Genre representation.
+type Genre struct {
+	ID   int
 	Name string
 }
 
 // Album ...
 // Album representation.
 type Album struct {
-	Artist    Artist
+	ID        int
+	Artist    *Artist
 	AlbumSize int
 	Title     string
 	Duration  duration
@@ -64,10 +73,23 @@ type Album struct {
 // Song ...
 // Song representation.
 type Song struct {
+	ID        int
 	Title     string
-	Album     Album
+	Album     *Album
 	Track     int
 	NumTracks int
+}
+
+// New ...
+// creates the connection to the db as a HeraldDB pointer.
+func New() *HeraldDB {
+	connStr := "user=herald dbname=herald_db sslmode=disable"
+	sqldb, err := sql.Open("postgres", connStr)
+	check(err)
+	hdb := HeraldDB{
+		sqldb,
+	}
+	return &hdb
 }
 
 // isValidTable ...
@@ -107,21 +129,9 @@ func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
 	return count, nil
 }
 
-// New ...
-// creates the connection to the db as a HeraldDB pointer.
-func New() *HeraldDB {
-	connStr := "user=herald dbname=herald_db sslmode=disable"
-	sqldb, err := sql.Open("postgres", connStr)
-	check(err)
-	hdb := HeraldDB{
-		sqldb,
-	}
-	return &hdb
-}
-
 // CreateLibrary ...
 // Creates the library of a given name and path.
-func (hdb *HeraldDB) createLibrary(name string, path string) {
+func (hdb *HeraldDB) CreateLibrary(name string, path string) {
 	stmt, err := hdb.db.Prepare("INSERT INTO music.libraries (library_name, fs_path) VALUES ($1, $2);")
 	check(err)
 	defer stmt.Close()
@@ -132,11 +142,13 @@ func (hdb *HeraldDB) createLibrary(name string, path string) {
 
 // GetLibraries ...
 func (hdb *HeraldDB) GetLibraries() []Library {
+	count, err := hdb.CountTable("music.libraries")
 	// query
 	rows, err := hdb.db.Query("SELECT library_name, fs_path from music.libraries;")
 	defer rows.Close()
+	check(err)
 
-	var libraries []Library
+	libraries := make([]Library, count)
 	for rows.Next() {
 		var l Library
 		err = rows.Scan(&l.Name, &l.Path)
@@ -145,6 +157,28 @@ func (hdb *HeraldDB) GetLibraries() []Library {
 	}
 
 	return libraries
+}
+
+// GetArtists ...
+func (hdb *HeraldDB) GetArtists() []Artist {
+	tableName := "music.artists"
+
+	count, err := hdb.CountTable(tableName)
+
+	rows, err := hdb.db.Query("SELECT artist_name from " + tableName)
+	defer rows.Close()
+
+	check(err)
+	var artists []Artist
+	artists = make([]Artist, count)
+	for idx := 0; rows.Next(); idx++ {
+		var a Artist
+		err = rows.Scan(&a.Name)
+		check(err)
+		artists[idx] = a
+	}
+
+	return artists
 }
 
 // checkFileType ...
@@ -174,7 +208,8 @@ func addSong(db *sql.DB, path string) {
 	s.Title = metadata.Title()
 	s.Track, s.NumTracks = metadata.Track()
 
-	s.Album = addAlbum(db, metadata)
+	albm := addAlbum(db, metadata)
+	s.Album = &albm
 
 }
 
@@ -223,4 +258,13 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) {
 		return err
 	}
 	filepath.Walk(lib.Path, walkFn)
+}
+
+// ScanLibraries ...
+// Scans all available libraries
+func (hdb *HeraldDB) ScanLibraries() {
+	libs := hdb.GetLibraries()
+	for _, lib := range libs {
+		hdb.ScanLibrary(lib)
+	}
 }
