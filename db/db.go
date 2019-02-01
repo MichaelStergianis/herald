@@ -29,9 +29,22 @@ func check(e error) {
 	}
 }
 
-// New ...
-// creates the connection to the db as a HeraldDB pointer.
-func New() *HeraldDB {
+// NewTestingDB ...
+// Creates a testing connection to and returns a HeraldDB pointer.
+func NewTestingDB() *HeraldDB {
+	connStr := "user=herald dbname=herald_db_test sslmode=disable"
+	sqldb, err := sql.Open("postgres", connStr)
+	check(err)
+
+	hdb := HeraldDB{
+		sqldb,
+	}
+	return &hdb
+}
+
+// NewHeraldDB ...
+// Creates the connection to the db as a HeraldDB pointer.
+func NewHeraldDB() *HeraldDB {
 	connStr := "user=herald dbname=herald_db sslmode=disable"
 	sqldb, err := sql.Open("postgres", connStr)
 	check(err)
