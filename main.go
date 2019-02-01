@@ -9,13 +9,13 @@ import (
 	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
-	HeraldDB "gitlab.stergianis.ca/herald/db"
+	heraldDB "gitlab.stergianis.ca/herald/db"
 )
 
 const resourcesLoc string = "frontend/resources/public/"
 
 // serveMusic ...
-func serveMusic(hdb *HeraldDB.HeraldDB) func(w http.ResponseWriter, r *http.Request) {
+func serveMusic(hdb *heraldDB.HeraldDB) func(w http.ResponseWriter, r *http.Request) {
 	f := func(w http.ResponseWriter, r *http.Request) {
 		args := r.URL.Query()
 		// error checking on args is somewhat important
@@ -32,12 +32,14 @@ func main() {
 	flag.Parse()
 	portString := ":" + strconv.Itoa(*port)
 
-	hdb := HeraldDB.New()
+	hdb := heraldDB.NewHeraldDB()
 
 	count, err := hdb.CountTable("music.libraries")
 	check(err)
 
 	fmt.Println("Count is:", count)
+
+	hdb.Close()
 
 	os.Exit(0)
 
