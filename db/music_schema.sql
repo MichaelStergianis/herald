@@ -1,6 +1,12 @@
 -- Music related
 CREATE SCHEMA IF NOT EXISTS music;
 
+CREATE TABLE IF NOT EXISTS music.libraries (
+       id SERIAL PRIMARY KEY,
+       name VARCHAR UNIQUE NOT NULL,
+       fs_path VARCHAR NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS music.artists (
        id SERIAL PRIMARY KEY,
        name VARCHAR NOT NULL
@@ -23,7 +29,9 @@ CREATE TABLE IF NOT EXISTS music.albums (
 
        release_year INTEGER,
        n_tracks INTEGER NOT NULL, -- number of songs
-       title VARCHAR NOT NULL
+       n_disks INTEGER NOT NULL,  -- number of disks
+       title VARCHAR NOT NULL,
+       duration VARCHAR NOT NULL -- seconds
 );
 
 CREATE TABLE IF NOT EXISTS music.images_in_album (
@@ -36,18 +44,15 @@ CREATE TABLE IF NOT EXISTS music.songs (
        id SERIAL PRIMARY KEY,
 
        album INTEGER REFERENCES music.albums(id),
+       genre INTEGER REFERENCES music.genres(id),
 
        fs_path VARCHAR UNIQUE NOT NULL,
        title VARCHAR NOT NULL,
+       track INTEGER NOT NULL,
+       num_tracks INTEGER NOT NULL,
        song_size INTEGER NOT NULL, -- bytes
        duration INTEGER NOT NULL,   -- seconds
        artist VARCHAR
-);
-
-CREATE TABLE IF NOT EXISTS music.libraries (
-       id SERIAL PRIMARY KEY,
-       name VARCHAR UNIQUE NOT NULL,
-       fs_path VARCHAR NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS music.songs_in_library (

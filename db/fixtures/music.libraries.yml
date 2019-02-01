@@ -1,0 +1,8 @@
+# music.libraries.yml
+- id: 1
+  name: Music
+  fs_path: /home/test/Music
+
+- id: 2
+  name: My Music
+  fs_path: /home/tests/MyMusic

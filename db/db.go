@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/dhowden/tag"
 
@@ -30,56 +29,6 @@ func check(e error) {
 	}
 }
 
-const (
-	unknownType = iota
-	musicType
-	imageType
-)
-
-type duration time.Duration
-
-// Library ...
-// A representation of a library.
-type Library struct {
-	ID   int
-	Name string
-	Path string
-}
-
-// Artist ...
-// A representation of an artist.
-type Artist struct {
-	ID   int
-	Name string
-}
-
-// Genre ...
-// Genre representation.
-type Genre struct {
-	ID   int
-	Name string
-}
-
-// Album ...
-// Album representation.
-type Album struct {
-	ID        int
-	Artist    *Artist
-	AlbumSize int
-	Title     string
-	Duration  duration
-}
-
-// Song ...
-// Song representation.
-type Song struct {
-	ID        int
-	Title     string
-	Album     *Album
-	Track     int
-	NumTracks int
-}
-
 // New ...
 // creates the connection to the db as a HeraldDB pointer.
 func New() *HeraldDB {
@@ -95,15 +44,23 @@ func New() *HeraldDB {
 // isValidTable ...
 // Checks to see if the table passed to CountTable is in the list of valid tables.
 func isValidTable(table string) bool {
-	var validTables = map[string]bool{
-		"music.artists":          true,
-		"music.genres":           true,
-		"music.images":           true,
-		"music.albums":           true,
-		"music.images_in_album":  true,
-		"music.songs":            true,
-		"music.libraries":        true,
-		"music.songs_in_library": true,
+	// create an empty type for our set
+	type s struct{}
+
+	var validTables = map[string]s{
+		// music schema
+		"music.artists":          s{},
+		"music.genres":           s{},
+		"music.images":           s{},
+		"music.albums":           s{},
+		"music.images_in_album":  s{},
+		"music.songs":            s{},
+		"music.libraries":        s{},
+		"music.songs_in_library": s{},
+
+		// config schema
+		"config.preferences": s{},
+		"config.users":       s{},
 	}
 
 	_, inTable := validTables[table]
@@ -117,15 +74,13 @@ func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
 		return 0, errors.New("In countTable: Invalid table")
 	}
 
-	rows, err := hdb.db.Query(`SELECT COUNT(*) AS count FROM ` + table)
-	check(err)
+	row := hdb.db.QueryRow(`SELECT COUNT(1) AS count FROM ` + table)
 
-	defer rows.Close()
-
-	for rows.Next() {
-		err := rows.Scan(&count)
-		check(err)
+	err = row.Scan(&count)
+	if err != nil {
+		return 0, err
 	}
+
 	return count, nil
 }
 
@@ -211,6 +166,14 @@ func addSong(db *sql.DB, path string) {
 	albm := addAlbum(db, metadata)
 	s.Album = &albm
 
+}
+
+// checkSong ...
+// Checks to see if the song is already in the database.
+func (hdb *HeraldDB) checkSong(song Song) bool {
+	hdb.db.QueryRow("select 1 as present from music.songs where fs_path = $1", song.path)
+
+	return false
 }
 
 // checkAlbum ...

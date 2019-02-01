@@ -1,0 +1,32 @@
+# music.albums.yml
+- id: 1
+  artist: 1
+  release_year: 2011
+  n_tracks: 20
+  n_disks: 1
+  title: III
+  duration: 1688
+
+- id: 2
+  artist: 2
+  release_year: 2001
+  n_tracks: 10
+  n_disks: 1
+  title: Sour Soul
+  duration: 1800
+
+- id: 3
+  artist: 3
+  release_year: 1980
+  n_tracks: 8
+  n_disks: 1
+  title: Killers
+  duration: 15440
+
+- id: 4
+  artist: 4
+  release_year: 1985
+  n_tracks: 13
+  n_disks: 1
+  title: Rust in Peace
+  duration: 1756

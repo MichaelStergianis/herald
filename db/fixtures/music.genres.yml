@@ -1,0 +1,12 @@
+# music.genres.yml
+- id: 1
+  name: Jazz
+
+- id: 2
+  name: Rap
+
+- id: 3
+  name: Metal
+
+- id: 4
+  name: Thrash Metal
