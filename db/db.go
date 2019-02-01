@@ -184,7 +184,7 @@ func addSong(db *sql.DB, path string) {
 // checkSong ...
 // Checks to see if the song is already in the database.
 func (hdb *HeraldDB) checkSong(song Song) bool {
-	hdb.db.QueryRow("select 1 as present from music.songs where fs_path = $1", song.path)
+	hdb.db.QueryRow("select 1 as present from music.songs where fs_path = $1", song.Path)
 
 	return false
 }
