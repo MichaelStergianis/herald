@@ -122,6 +122,9 @@ func (hdb *HeraldDB) GetLibraries() []Library {
 	return libraries
 }
 
+// select artists.name, albums.title from music.albums inner join
+// music.artists on (music.albums.artist = music.artists.id);
+
 // GetArtists ...
 func (hdb *HeraldDB) GetArtists() []Artist {
 	tableName := "music.artists"

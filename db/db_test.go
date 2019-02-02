@@ -50,6 +50,8 @@ func TestMain(m *testing.M) {
 // TestCountTable ...
 func TestCountTable(t *testing.T) {
 	prepareTestDatabase()
+
+	// positive case
 	count, err := hdb.CountTable("music.artists")
 
 	if err != nil {
@@ -57,6 +59,13 @@ func TestCountTable(t *testing.T) {
 	}
 
 	if count != 4 {
+		t.Fail()
+	}
+
+	// negative case
+	count, err = hdb.CountTable("music.non-existant")
+
+	if err == nil {
 		t.Fail()
 	}
 }
