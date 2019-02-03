@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"os"
 	"path"
 	"strconv"
 
@@ -32,16 +31,10 @@ func main() {
 	flag.Parse()
 	portString := ":" + strconv.Itoa(*port)
 
-	hdb := heraldDB.NewHeraldDB()
-
-	count, err := hdb.CountTable("music.libraries")
+	hdb, err := heraldDB.Open("dbname=herald user=herald sslmode=disable")
 	check(err)
 
-	fmt.Println("Count is:", count)
-
-	hdb.Close()
-
-	os.Exit(0)
+	defer hdb.Close()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "frontend/resources/public/index.html")

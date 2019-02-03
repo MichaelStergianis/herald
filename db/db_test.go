@@ -81,13 +81,14 @@ func TestCreateLibrary(t *testing.T) {
 		t.Error(err)
 	}
 
-	row := hdb.db.QueryRow("SELECT libraries.name, libraries.fs_path FROM music.libraries WHERE (libraries.name = $1)", expected.Name)
+	row := hdb.db.QueryRow("SELECT libraries.name, libraries.fs_path FROM music.libraries WHERE (libraries.name = $1)",
+		expected.Name)
 
 	var result Library
 	row.Scan(&result.Name, &result.Path)
 
 	if expected != result {
-		t.Error(errors.New("expected did not equal result"))
+		t.Error(errors.New("db_test: expected did not equal result"))
 
 	}
 }
@@ -113,7 +114,7 @@ func TestGetLibraries(t *testing.T) {
 
 	for i := 0; i < len(results); i++ {
 		if expected[i] != results[i] {
-			t.Error(errors.New("expected did not match results"))
+			t.Error(errors.New("db_test: expected did not match results"))
 		}
 	}
 }
