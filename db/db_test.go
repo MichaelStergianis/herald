@@ -141,3 +141,60 @@ func TestGetArtists(t *testing.T) {
 		}
 	}
 }
+
+// TestSongInLibrary ...
+func TestSongInLibrary(t *testing.T) {
+	var (
+		inLib bool
+		err   error
+	)
+
+	song := Song{
+		ID:   3,
+		Path: "Iron Maiden/Killers/01 The Ides of March.mp3",
+	}
+
+	lib := Library{
+		ID:   2,
+		Name: "My Music",
+		Path: "/home/tests/MyMusic",
+	}
+
+	inLib, err = hdb.songInLibrary(song, lib)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !inLib {
+		t.Error(errors.New("expected song is not in library"))
+	}
+}
+
+// TestSongNotInLibrary ...
+func TestSongNotInLibrary(t *testing.T) {
+	var (
+		inLib bool
+		err   error
+	)
+
+	song := Song{
+		ID:   3,
+		Path: "Iron Maiden/Killers/01 The Ides of March.mp3",
+	}
+	lib := Library{
+		ID:   1,
+		Name: "Music",
+		Path: "/home/test/Music",
+	}
+
+	inLib, err = hdb.songInLibrary(song, lib)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if inLib {
+		t.Error(errors.New("unexpected song in library"))
+	}
+}
