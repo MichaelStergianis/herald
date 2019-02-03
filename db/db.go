@@ -213,18 +213,12 @@ func (hdb *HeraldDB) addSong(path string, lib Library) {
 // songInLibrary ...
 // Checks to see if the song is already in the database.
 func (hdb *HeraldDB) songInLibrary(song Song, lib Library) (inLib bool, err error) {
-
-	// select * from music.songs where fs_path = 'BADBADNOTGOOD/III/01 In the Night.mp3'
-	// AND (select true from music.songs_in_library
-	// where songs_in_library.song_id = songs.id AND
-	// songs_in_library.library_id = 1);
-
-	query := "SELECT COUNT(1) " +
-		"FROM " +
-		"(SELECT songs.id, songs.title FROM music.songs WHERE songs.fs_path = $1) AS songs " +
-		"INNER JOIN " +
-		"(SELECT * FROM music.songs_in_library WHERE songs_in_library.library_id = $2) AS songs_in_library " +
-		"ON songs.id = songs_in_library.song_id;"
+	query :=
+		"SELECT COUNT(1) FROM " +
+			"(SELECT songs.id, songs.title FROM music.songs WHERE songs.fs_path = $1) AS songs " +
+			"INNER JOIN " +
+			"(SELECT * FROM music.songs_in_library WHERE songs_in_library.library_id = $2) AS songs_in_library " +
+			"ON songs.id = songs_in_library.song_id;"
 
 	row := hdb.db.QueryRow(query, song.Path, lib.ID)
 
