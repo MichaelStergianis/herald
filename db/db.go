@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -94,57 +93,80 @@ func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
 
 // CreateLibrary ...
 // Creates the library of a given name and path.
-func (hdb *HeraldDB) CreateLibrary(name string, path string) {
-	stmt, err := hdb.db.Prepare("INSERT INTO music.libraries (library_name, fs_path) VALUES ($1, $2);")
-	check(err)
+func (hdb *HeraldDB) CreateLibrary(name string, path string) (err error) {
+	stmt, err := hdb.db.Prepare("INSERT INTO music.libraries (name, fs_path) VALUES ($1, $2);")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
-	res, err := stmt.Exec(name, path)
-	check(err)
-	fmt.Println(res)
+
+	_, err = stmt.Exec(name, path)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetLibraries ...
-func (hdb *HeraldDB) GetLibraries() []Library {
-	count, err := hdb.CountTable("music.libraries")
-	// query
-	rows, err := hdb.db.Query("SELECT library_name, fs_path from music.libraries;")
-	defer rows.Close()
-	check(err)
+func (hdb *HeraldDB) GetLibraries() (libs []Library, err error) {
+	tableName := "music.libraries"
 
-	libraries := make([]Library, count)
-	for rows.Next() {
-		var l Library
-		err = rows.Scan(&l.Name, &l.Path)
-		check(err)
-		libraries = append(libraries, l)
+	count, err := hdb.CountTable(tableName)
+
+	// query
+	rows, err := hdb.db.Query("SELECT id, name, fs_path from " + tableName + " ORDER BY id;")
+	defer rows.Close()
+	if err != nil {
+		return nil, err
 	}
 
-	return libraries
+	libs = make([]Library, count)
+	for i := 0; rows.Next(); i++ {
+		var l Library
+		err = rows.Scan(&l.ID, &l.Name, &l.Path)
+		if err != nil {
+			return nil, err
+		}
+
+		libs[i] = l
+	}
+
+	return libs, nil
 }
 
 // select artists.name, albums.title from music.albums inner join
 // music.artists on (music.albums.artist = music.artists.id);
 
 // GetArtists ...
-func (hdb *HeraldDB) GetArtists() []Artist {
+func (hdb *HeraldDB) GetArtists() (artists []Artist, err error) {
 	tableName := "music.artists"
 
 	count, err := hdb.CountTable(tableName)
-
-	rows, err := hdb.db.Query("SELECT artist_name from " + tableName)
-	defer rows.Close()
-
-	check(err)
-	var artists []Artist
-	artists = make([]Artist, count)
-	for idx := 0; rows.Next(); idx++ {
-		var a Artist
-		err = rows.Scan(&a.Name)
-		check(err)
-		artists[idx] = a
+	if err != nil {
+		return nil, err
 	}
 
-	return artists
+	rows, err := hdb.db.Query("SELECT id, name FROM " + tableName + " ORDER BY id;")
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	artists = make([]Artist, count)
+	for i := 0; rows.Next(); i++ {
+		var a Artist
+		err = rows.Scan(&a.ID, &a.Name)
+
+		if err != nil {
+			return nil, err
+		}
+
+		artists[i] = a
+	}
+
+	return artists, nil
 }
 
 // checkFileType ...
@@ -237,7 +259,10 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) {
 // ScanLibraries ...
 // Scans all available libraries
 func (hdb *HeraldDB) ScanLibraries() {
-	libs := hdb.GetLibraries()
+	libs, err := hdb.GetLibraries()
+
+	check(err)
+
 	for _, lib := range libs {
 		hdb.ScanLibrary(lib)
 	}
