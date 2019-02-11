@@ -6,6 +6,8 @@
   title: In the Night
   track: 1
   num_tracks: 20
+  disk: 1
+  num_disks: 1
   song_size: 204192
   duration: 1993
   artist: BADBADNOTGOOD
@@ -13,10 +15,12 @@
 - id: 2
   album: 2
   genre: 2
-  fs_path: BADBADNOTGOOD & Ghostface Killah/01 Sour Soul.mp3
+  fs_path: BADBADNOTGOOD & Ghostface Killah/Sour Soul/01 Sour Soul.mp3
   title: Sour Soul
   track: 1
   num_tracks: 10
+  disk: 1
+  num_disks: 1
   song_size: 19203
   duration: 1920
   artist: BADBADNOTGOOD & Ghostface Killah
@@ -28,6 +32,8 @@
   title: The Ides of March
   track: 1
   num_tracks: 8
+  disk: 1
+  num_disks: 1
   song_size: 2109
   duration: 210
   artist: Iron Maiden
@@ -39,6 +45,8 @@
   title: Hangar 18
   track: 1
   num_tracks: 13
+  disk: 1
+  num_disks: 1
   song_size: 99948
   duration: 9994
   artist: Megadeth

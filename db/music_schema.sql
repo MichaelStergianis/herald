@@ -11,7 +11,8 @@ CREATE INDEX IF NOT EXISTS ix_libraries ON music.libraries (id, name);
 
 CREATE TABLE IF NOT EXISTS music.artists (
        id SERIAL PRIMARY KEY,
-       name VARCHAR UNIQUE NOT NULL
+       name VARCHAR NOT NULL,
+       fs_path VARCHAR UNIQUE NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS ix_artists ON music.artists (id, name);
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS music.albums (
        n_tracks INTEGER NOT NULL, -- number of songs
        n_disks INTEGER NOT NULL,  -- number of disks
        title VARCHAR NOT NULL,
+       fs_path VARCHAR UNIQUE NOT NULL,
        duration VARCHAR NOT NULL -- seconds
 );
 
@@ -60,6 +62,8 @@ CREATE TABLE IF NOT EXISTS music.songs (
        title VARCHAR NOT NULL,
        track INTEGER NOT NULL,
        num_tracks INTEGER NOT NULL,
+       disk INTEGER NOT NULL,
+       num_disks INTEGER NOT NULL,
        song_size INTEGER NOT NULL, -- bytes
        duration INTEGER NOT NULL,   -- seconds
        artist VARCHAR

@@ -5,6 +5,7 @@
   n_tracks: 20
   n_disks: 1
   title: III
+  fs_path: BADBADNOTGOOD/III/
   duration: 1688
 
 - id: 2
@@ -13,6 +14,7 @@
   n_tracks: 10
   n_disks: 1
   title: Sour Soul
+  fs_path: Sour Soul/
   duration: 1800
 
 - id: 3
@@ -21,6 +23,7 @@
   n_tracks: 8
   n_disks: 1
   title: Killers
+  fs_path: Killers/
   duration: 15440
 
 - id: 4
@@ -29,4 +32,5 @@
   n_tracks: 13
   n_disks: 1
   title: Rust in Peace
+  fs_path: Rust in Peace/
   duration: 1756

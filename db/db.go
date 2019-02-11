@@ -6,10 +6,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/dhowden/tag"
-
 	// pq uses golang sql
 	_ "github.com/lib/pq"
 	ft "gopkg.in/h2non/filetype.v1"
@@ -78,7 +78,7 @@ func isValidTable(table string) bool {
 // Gets the count of a table in our database.
 func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
 	if !isValidTable(table) {
-		return 0, errors.New("In countTable: Invalid table")
+		return 0, errors.New("hdb: invalid table to count")
 	}
 
 	row := hdb.db.QueryRow(`SELECT COUNT(1) AS count FROM ` + table)
@@ -91,16 +91,28 @@ func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
 	return count, nil
 }
 
-// CreateLibrary ...
+// fmtLib ...
+// Formats the library string.
+func fmtLib(p string) (formatted string) {
+	return path.Join(p) + "/"
+}
+
+// AddLibrary ...
 // Creates the library of a given name and path.
-func (hdb *HeraldDB) CreateLibrary(name string, path string) (err error) {
+func (hdb *HeraldDB) AddLibrary(name string, fsPath string) (err error) {
+	fsPath = fmtLib(fsPath)
+
+	if !path.IsAbs(fsPath) {
+		return ErrLibAbs
+	}
+
 	stmt, err := hdb.db.Prepare("INSERT INTO music.libraries (name, fs_path) VALUES ($1, $2);")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(name, path)
+	_, err = stmt.Exec(name, fsPath)
 	if err != nil {
 		return err
 	}
@@ -147,7 +159,7 @@ func (hdb *HeraldDB) GetArtists() (artists []Artist, err error) {
 		return nil, err
 	}
 
-	rows, err := hdb.db.Query("SELECT id, name FROM " + tableName + " ORDER BY id;")
+	rows, err := hdb.db.Query("SELECT id, name, fs_path FROM " + tableName + " ORDER BY id;")
 
 	if err != nil {
 		return nil, err
@@ -157,7 +169,7 @@ func (hdb *HeraldDB) GetArtists() (artists []Artist, err error) {
 	artists = make([]Artist, count)
 	for i := 0; rows.Next(); i++ {
 		var a Artist
-		err = rows.Scan(&a.ID, &a.Name)
+		err = rows.Scan(&a.ID, &a.Name, &a.Path)
 
 		if err != nil {
 			return nil, err
@@ -183,44 +195,66 @@ func fileType(file string) int {
 	}
 }
 
+// stripLibrary ...
+func stripLibrary(fsPath string, lib Library) string {
+	return ""
+}
+
 // addSong ...
 // Adds a song to the database.
-func (hdb *HeraldDB) addSong(path string, lib Library) {
-	f, err := os.Open(path)
-	check(err)
+func (hdb *HeraldDB) addSong(fsPath string, lib Library) (err error) {
+
+	f, err := os.Open(fsPath)
+	if err != nil {
+		return err
+	}
 
 	metadata, err := tag.ReadFrom(f)
-	check(err)
+	if err != nil {
+		return err
+	}
 
 	var s Song
-	s.Path = path
+	s.Path = fsPath
 
-	inLib, err := hdb.songInLibrary(s, lib)
-	check(err)
+	inLib, err := hdb.songInDatabase(s)
+	if err != nil {
+		return err
+	}
 
 	if inLib {
 		return
 	}
 
+	artist, err := hdb.addArtist(Artist{
+		Name: metadata.AlbumArtist(),
+	})
+	if err != nil {
+		return err
+	}
+
 	s.Title = metadata.Title()
 	s.Track, s.NumTracks = metadata.Track()
+	disk, nDisks := metadata.Disc()
 
-	albm := addAlbum(hdb.db, metadata)
-	s.Album = &albm
+	album := hdb.addAlbum(Album{
+		Artist:    artist.ID,
+		Year:      metadata.Year(),
+		NumTracks: s.NumTracks,
+		NumDisks:  nDisks,
+		Title:     metadata.Album(),
+	})
+	s.Album = album.ID
 
+	return nil
 }
 
-// songInLibrary ...
+// songInDatabase ...
 // Checks to see if the song is already in the database.
-func (hdb *HeraldDB) songInLibrary(song Song, lib Library) (inLib bool, err error) {
-	query :=
-		"SELECT COUNT(1) FROM " +
-			"(SELECT songs.id, songs.title FROM music.songs WHERE songs.fs_path = $1) AS songs " +
-			"INNER JOIN " +
-			"(SELECT * FROM music.songs_in_library WHERE songs_in_library.library_id = $2) AS songs_in_library " +
-			"ON songs.id = songs_in_library.song_id;"
+func (hdb *HeraldDB) songInDatabase(song Song) (inLib bool, err error) {
+	query := "SELECT COUNT(1) FROM music.songs where songs.fs_path = $1;"
 
-	row := hdb.db.QueryRow(query, song.Path, lib.ID)
+	row := hdb.db.QueryRow(query, song.Path)
 
 	var numInLib int
 	err = row.Scan(&numInLib)
@@ -241,44 +275,123 @@ func (hdb *HeraldDB) songInLibrary(song Song, lib Library) (inLib bool, err erro
 // addAlbum ...
 // looks in the database for the album information contained in the song metadata,
 // if it is not found the function creates and returns the album
-func addAlbum(db *sql.DB, metadata tag.Metadata) Album {
+func (hdb *HeraldDB) addAlbum(album Album) Album {
 	// albumName := metadata.Album()
 	// _, numTracks := metadata.Track()
 	// albumArtist := metadata.AlbumArtist()
 
+	// if album is already in database return the fetched album
+
 	return Album{}
 }
 
-// albumInLibrary ...
-// checks if the album exists in the database
-func (hdb *HeraldDB) albumInDatabase(albm Album) (isIn bool) {
-	// stmt, err := db.Prepare("SELECT COUNT(*) FROM music.albums WHERE music.albums.title = ?;")
-	// check(err)
+// addArtist ...
+func (hdb *HeraldDB) addArtist(artist Artist) (a Artist, err error) {
+	a, err = hdb.GetArtist(artist)
 
-	return false
+	if err != nil && err != sql.ErrNoRows {
+		return Artist{}, err
+	}
+
+	if a != (Artist{}) {
+		return a, nil
+	}
+
+	// add information from artist
+	query := "INSERT INTO music.artists (name, fs_path) VALUES ($1, $2)"
+	stmt, err := hdb.db.Prepare(query)
+
+	if err != nil {
+		return Artist{}, err
+	}
+
+	result, err := stmt.Exec(artist.Name, artist.Path)
+	if err != nil {
+		return Artist{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return Artist{}, err
+	}
+
+	a.ID = id
+	a.Name = artist.Name
+	a.Path = artist.Path
+
+	return a, nil
+}
+
+// GetArtist ...
+func (hdb *HeraldDB) GetArtist(artist Artist) (a Artist, err error) {
+	baseQuery := "SELECT id, name, fs_path FROM music.artists WHERE "
+
+	var row *sql.Row
+
+	if artist.ID != 0 {
+		row = hdb.db.QueryRow(baseQuery+"artists.id = $1", artist.ID)
+	} else if artist.Path != "" {
+		row = hdb.db.QueryRow(baseQuery+"artists.fs_path = $1", artist.Path)
+	} else {
+		return Artist{}, ErrNonUnique
+	}
+
+	err = row.Scan(&a.ID, &a.Name, &a.Path)
+
+	if err != nil {
+		return Artist{}, err
+	}
+
+	return a, nil
+}
+
+// GetAlbum ...
+// Returns a full album based on some unique information.
+// Accepted fields
+func (hdb *HeraldDB) GetAlbum(album Album) (a Album, err error) {
+	baseQuery := "SELECT id, artist, release_year, n_tracks, n_disks, title, fs_path, duration FROM music.albums WHERE "
+
+	var row *sql.Row
+
+	if album.ID != 0 {
+		row = hdb.db.QueryRow(baseQuery+"albums.id = $1", album.ID)
+	} else if album.Path != "" {
+		row = hdb.db.QueryRow(baseQuery+"albums.fs_path = $1", album.Path)
+	} else {
+		return Album{}, ErrNonUnique
+	}
+
+	err = row.Scan(&a.ID, &a.Artist, &a.Year, &a.NumTracks, &a.NumDisks, &a.Title, &a.Path, &a.Duration)
+
+	// error scanning the row
+	if err != nil {
+		return Album{}, err
+	}
+
+	return a, nil
 }
 
 // addImageFile ...
-func addImageFile(db *sql.DB, path string) {
+func addImageFile(db *sql.DB, fsPath string) {
 
 }
 
 // ScanLibrary ...
 // Scans the library. If some media is already in the library, it will not add it again.
 func (hdb *HeraldDB) ScanLibrary(lib Library) {
-	walkFn := func(path string, info os.FileInfo, err error) error {
+	walkFn := func(fsPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			log.Printf("Encountered the following error while traversing %q: %v", path, err)
+			log.Printf("Encountered the following error while traversing %q: %v", fsPath, err)
 			return err
 		}
 		if info.IsDir() {
 			return err
 		}
-		switch fileType(path) {
+		switch fileType(fsPath) {
 		case musicType:
-			hdb.addSong(path, lib)
+			hdb.addSong(fsPath, lib)
 		case imageType:
-			addImageFile(hdb.db, path)
+			addImageFile(hdb.db, fsPath)
 		}
 		return err
 	}
