@@ -215,7 +215,12 @@ func (hdb *HeraldDB) addSong(fsPath string, lib Library) (err error) {
 	}
 
 	var s Song
-	s.Path = fsPath
+	s = Song{
+		Path:  fsPath,
+		Title: metadata.Title(),
+	}
+	s.Track, s.NumTracks = metadata.Track()
+	s.Disk, s.NumDisks = metadata.Disc()
 
 	inLib, err := hdb.songInDatabase(s)
 	if err != nil {
@@ -233,17 +238,18 @@ func (hdb *HeraldDB) addSong(fsPath string, lib Library) (err error) {
 		return err
 	}
 
-	s.Title = metadata.Title()
-	s.Track, s.NumTracks = metadata.Track()
-	disk, nDisks := metadata.Disc()
-
-	album := hdb.addAlbum(Album{
+	album, err := hdb.addAlbum(Album{
 		Artist:    artist.ID,
 		Year:      metadata.Year(),
 		NumTracks: s.NumTracks,
-		NumDisks:  nDisks,
+		NumDisks:  s.NumDisks,
 		Title:     metadata.Album(),
 	})
+
+	if err != nil {
+		return err
+	}
+
 	s.Album = album.ID
 
 	return nil
@@ -275,14 +281,38 @@ func (hdb *HeraldDB) songInDatabase(song Song) (inLib bool, err error) {
 // addAlbum ...
 // looks in the database for the album information contained in the song metadata,
 // if it is not found the function creates and returns the album
-func (hdb *HeraldDB) addAlbum(album Album) Album {
-	// albumName := metadata.Album()
-	// _, numTracks := metadata.Track()
-	// albumArtist := metadata.AlbumArtist()
+func (hdb *HeraldDB) addAlbum(album Album) (a Album, err error) {
+	a, err = hdb.GetAlbum(album)
 
-	// if album is already in database return the fetched album
+	if err != nil && err != sql.ErrNoRows {
+		return Album{}, err
+	}
 
-	return Album{}
+	if a != (Album{}) {
+		return a, nil
+	}
+
+	// add the album
+	query := "INSERT INTO music.albums " +
+		"(artist, release_year, n_tracks, n_disks, title, fs_path) " +
+		"VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
+
+	err = hdb.db.QueryRow(query, album.Artist,
+		album.Year, album.NumTracks, album.NumDisks,
+		album.Title, album.Path).Scan(&a.ID)
+
+	if err != nil {
+		return Album{}, err
+	}
+
+	a.Artist = album.Artist
+	a.Year = album.Year
+	a.NumTracks = album.NumTracks
+	a.NumDisks = album.NumDisks
+	a.Title = album.Title
+	a.Path = album.Path
+
+	return a, nil
 }
 
 // addArtist ...
@@ -298,24 +328,13 @@ func (hdb *HeraldDB) addArtist(artist Artist) (a Artist, err error) {
 	}
 
 	// add information from artist
-	query := "INSERT INTO music.artists (name, fs_path) VALUES ($1, $2)"
-	stmt, err := hdb.db.Prepare(query)
+	query := "INSERT INTO music.artists (name, fs_path) VALUES ($1, $2) RETURNING id"
+	err = hdb.db.QueryRow(query, artist.Name, artist.Path).Scan(&a.ID)
 
 	if err != nil {
 		return Artist{}, err
 	}
 
-	result, err := stmt.Exec(artist.Name, artist.Path)
-	if err != nil {
-		return Artist{}, err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return Artist{}, err
-	}
-
-	a.ID = id
 	a.Name = artist.Name
 	a.Path = artist.Path
 

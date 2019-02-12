@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -272,12 +273,60 @@ func TestGetAlbumNegative(t *testing.T) {
 
 	a, err = hdb.GetAlbum(album)
 
-	if err != ErrAlbumAbsent && err != nil {
+	if err != sql.ErrNoRows && err != nil {
 		t.Error(err)
 	}
 
 	if a == album {
 		t.Error(errors.New("unexpected album is in database"))
+	}
+}
+
+// TestAddArtist ...
+func TestAddArtist(t *testing.T) {
+	prepareTestDatabase()
+
+	artist := Artist{
+		Name: "Clever Girl",
+		Path: "Clever Girl/",
+	}
+
+	a, err := hdb.addArtist(artist)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	a.ID = 0
+
+	if a != artist {
+		t.Error(errors.New("unexpected value returned"))
+
+	}
+}
+
+// TestAddAlbum ...
+func TestAddAlbum(t *testing.T) {
+	prepareTestDatabase()
+
+	album := Album{
+		Artist:    4,
+		Year:      2001,
+		NumTracks: 11,
+		NumDisks:  1,
+		Title:     "Counterparts",
+		Path:      "Rush/Counterparts/",
+	}
+
+	a, err := hdb.addAlbum(album)
+	if err != nil {
+		t.Error(err)
+	}
+
+	a.ID = 0
+
+	if a != album {
+		t.Error(errors.New("unexpected value returned"))
 	}
 }
 

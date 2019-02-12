@@ -14,7 +14,7 @@
   n_tracks: 10
   n_disks: 1
   title: Sour Soul
-  fs_path: Sour Soul/
+  fs_path: BADBADNOTGOOD & Ghostface Killah/Sour Soul/
   duration: 1800
 
 - id: 3
@@ -23,7 +23,7 @@
   n_tracks: 8
   n_disks: 1
   title: Killers
-  fs_path: Killers/
+  fs_path: Iron Maiden/Killers/
   duration: 15440
 
 - id: 4
@@ -32,5 +32,5 @@
   n_tracks: 13
   n_disks: 1
   title: Rust in Peace
-  fs_path: Rust in Peace/
+  fs_path: Rush/Rust in Peace/
   duration: 1756
