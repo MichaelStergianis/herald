@@ -98,7 +98,9 @@ func fmtLib(p string) (formatted string) {
 }
 
 // AddLibrary ...
-// Creates the library of a given name and path.
+// Creates the library of a given name and path. Requries an absolute
+// path. You should not make assumptions about from which directory
+// this server will be run.
 func (hdb *HeraldDB) AddLibrary(name string, fsPath string) (err error) {
 	fsPath = fmtLib(fsPath)
 
@@ -200,9 +202,9 @@ func stripLibrary(fsPath string, lib Library) string {
 	return ""
 }
 
-// addSong ...
+// processMedia ...
 // Adds a song to the database.
-func (hdb *HeraldDB) addSong(fsPath string, lib Library) (err error) {
+func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 
 	f, err := os.Open(fsPath)
 	if err != nil {
@@ -408,7 +410,7 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) {
 		}
 		switch fileType(fsPath) {
 		case musicType:
-			hdb.addSong(fsPath, lib)
+			hdb.processMedia(fsPath, lib)
 		case imageType:
 			addImageFile(hdb.db, fsPath)
 		}
