@@ -9,10 +9,7 @@ music that you own without having to upload it to someone else's server (unless
 that is what you want)
 
 ## Dependencies
-golang
-
-postgres (>10)
-
-clojure
-
-clojurescript
+golang  
+postgres (>10)  
+clojure  
+clojurescript  
