@@ -10,6 +10,9 @@ that is what you want)
 
 ## Dependencies
 golang
+
 postgres (>10)
+
 clojure
+
 clojurescript
