@@ -2,7 +2,7 @@
 - id: 1
   album: 1
   genre: 1
-  fs_path: BADBADNOTGOOD/III/01 In the Night.mp3
+  fs_path: /home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3
   title: In the Night
   track: 1
   num_tracks: 20
@@ -15,7 +15,7 @@
 - id: 2
   album: 2
   genre: 2
-  fs_path: BADBADNOTGOOD & Ghostface Killah/Sour Soul/01 Sour Soul.mp3
+  fs_path: /home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul/01 Sour Soul.mp3
   title: Sour Soul
   track: 1
   num_tracks: 10
@@ -28,7 +28,7 @@
 - id: 3
   album: 3
   genre: 3
-  fs_path: Iron Maiden/Killers/01 The Ides of March.mp3
+  fs_path: /home/tests/MyMusic/Iron Maiden/Killers/01 The Ides of March.mp3
   title: The Ides of March
   track: 1
   num_tracks: 8
@@ -41,7 +41,7 @@
 - id: 4
   album: 4
   genre: 4
-  fs_path: Megadeth/Rust in Peace/01 Hangar 18.mp3
+  fs_path: /home/test/Music/Megadeth/Rust in Peace/01 Hangar 18.mp3
   title: Hangar 18
   track: 1
   num_tracks: 13

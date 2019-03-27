@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS music.albums (
        n_disks INTEGER NOT NULL,  -- number of disks
        title VARCHAR NOT NULL,
        fs_path VARCHAR UNIQUE NOT NULL,
-       duration VARCHAR -- seconds
+       duration DOUBLE PRECISION -- seconds
 );
 
 CREATE INDEX IF NOT EXISTS ix_albums ON music.albums (id, title);
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS music.songs (
        num_tracks INTEGER NOT NULL,
        disk INTEGER NOT NULL,
        num_disks INTEGER NOT NULL,
-       song_size INTEGER NOT NULL, -- bytes
-       duration INTEGER NOT NULL,   -- seconds
+       song_size INTEGER NOT NULL,           -- bytes
+       duration DOUBLE PRECISION NOT NULL,   -- seconds
        artist VARCHAR
 );
 

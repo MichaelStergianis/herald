@@ -24,7 +24,7 @@ else
     echo "User herald exists."
 fi
 
-if [ $1 = "clean" ]; then
+if [ "$1" = "clean" ]; then
     echo "Cleaning databases"
     cleanDB herald
     cleanDB herald_test
