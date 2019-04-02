@@ -27,7 +27,7 @@ import (
 // HeraldDB ...
 // A type for interfacing with the herald db
 type HeraldDB struct {
-	db *sql.DB
+	*sql.DB
 }
 
 // check ...
@@ -94,7 +94,7 @@ func duration(song Song) (d float64, err error) {
 // Close ...
 // Closes an hdb.
 func (hdb *HeraldDB) Close() {
-	hdb.db.Close()
+	hdb.DB.Close()
 }
 
 // isValidTable ...
@@ -130,7 +130,7 @@ func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
 		return 0, ErrInvalidTable
 	}
 
-	row := hdb.db.QueryRow(`SELECT COUNT(1) AS count FROM ` + table)
+	row := hdb.QueryRow(`SELECT COUNT(1) AS count FROM ` + table)
 
 	err = row.Scan(&count)
 	if err != nil {
@@ -149,7 +149,7 @@ func (hdb *HeraldDB) AddLibrary(name string, fsPath string) (err error) {
 		return ErrNotAbs
 	}
 
-	stmt, err := hdb.db.Prepare("INSERT INTO music.libraries (name, fs_path) VALUES ($1, $2);")
+	stmt, err := hdb.Prepare("INSERT INTO music.libraries (name, fs_path) VALUES ($1, $2);")
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (hdb *HeraldDB) GetLibraries() (libs map[string]Library, err error) {
 	count, err := hdb.CountTable(tableName)
 
 	// query
-	rows, err := hdb.db.Query("SELECT id, name, fs_path from " + tableName + " ORDER BY id;")
+	rows, err := hdb.Query("SELECT id, name, fs_path from " + tableName + " ORDER BY id;")
 	defer rows.Close()
 	if err != nil {
 		return nil, err
@@ -203,7 +203,7 @@ func (hdb *HeraldDB) GetArtists() (artists []Artist, err error) {
 		return nil, err
 	}
 
-	rows, err := hdb.db.Query("SELECT id, name, fs_path FROM " + tableName + " ORDER BY id;")
+	rows, err := hdb.Query("SELECT id, name, fs_path FROM " + tableName + " ORDER BY id;")
 
 	if err != nil {
 		return nil, err
@@ -330,14 +330,14 @@ func (hdb *HeraldDB) songInLibrary(song Song, library Library) (inLib bool, err 
 	if song.Path == "" {
 		return false, ErrNonUnique
 	}
-	err = hdb.db.QueryRow("SELECT id FROM music.songs where fs_path = $1", song.Path).Scan(&song.ID)
+	err = hdb.QueryRow("SELECT id FROM music.songs where fs_path = $1", song.Path).Scan(&song.ID)
 	if err != nil && !(err == sql.ErrNoRows) {
 		return false, err
 	}
 
 	query := "SELECT COUNT(1) FROM music.songs_in_library where song_id = $1 AND library_id = $2;"
 
-	row := hdb.db.QueryRow(query, song.ID, library.ID)
+	row := hdb.QueryRow(query, song.ID, library.ID)
 
 	var numInLib int
 	err = row.Scan(&numInLib)
@@ -363,13 +363,13 @@ func (hdb *HeraldDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
 	}
 
 	var size int
-	err = hdb.db.QueryRow("SELECT COUNT(1) FROM music.songs_in_library WHERE library_id = $1", lib.ID).Scan(&size)
+	err = hdb.QueryRow("SELECT COUNT(1) FROM music.songs_in_library WHERE library_id = $1", lib.ID).Scan(&size)
 	if err != nil {
 		return nil, err
 	}
 	songs = make([]Song, size)
 
-	rows, err := hdb.db.Query("SELECT song_id FROM music.songs_in_library WHERE library_id = $1 ORDER BY song_id", lib.ID)
+	rows, err := hdb.Query("SELECT song_id FROM music.songs_in_library WHERE library_id = $1 ORDER BY song_id", lib.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +406,7 @@ func (hdb *HeraldDB) addSong(song Song) (s Song, err error) {
 		"(album, genre, fs_path, title, track, num_tracks, disk, num_disks, song_size, duration, artist) " +
 		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
 
-	err = hdb.db.QueryRow(query, song.Album,
+	err = hdb.QueryRow(query, song.Album,
 		song.Genre, song.Path, song.Title, song.Track, song.NumTracks, song.Disk,
 		song.NumDisks, song.Size, song.Duration, song.Artist).Scan(&song.ID)
 
@@ -436,7 +436,7 @@ func (hdb *HeraldDB) addAlbum(album Album) (a Album, err error) {
 		"(artist, release_year, n_tracks, n_disks, title, fs_path) " +
 		"VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
 
-	err = hdb.db.QueryRow(query, album.Artist,
+	err = hdb.QueryRow(query, album.Artist,
 		album.Year, album.NumTracks, album.NumDisks,
 		album.Title, album.Path).Scan(&album.ID)
 
@@ -461,7 +461,7 @@ func (hdb *HeraldDB) addGenre(genre Genre) (Genre, error) {
 	}
 
 	query := "INSERT INTO music.genres (name) VALUES ($1) RETURNING id"
-	err = hdb.db.QueryRow(query, genre.Name).Scan(&genre.ID)
+	err = hdb.QueryRow(query, genre.Name).Scan(&genre.ID)
 	if err != nil {
 		return Genre{}, err
 	}
@@ -487,7 +487,7 @@ func (hdb *HeraldDB) addArtist(artist Artist) (a Artist, err error) {
 
 	// add information from artist
 	query := "INSERT INTO music.artists (name, fs_path) VALUES ($1, $2) RETURNING id"
-	err = hdb.db.QueryRow(query, artist.Name, artist.Path).Scan(&a.ID)
+	err = hdb.QueryRow(query, artist.Name, artist.Path).Scan(&a.ID)
 
 	if err != nil {
 		return Artist{}, err
@@ -511,7 +511,7 @@ func (hdb *HeraldDB) addSongToLibrary(song Song, lib Library) error {
 	}
 
 	query := "INSERT INTO music.songs_in_library (song_id, library_id) VALUES ($1, $2)"
-	stmt, err := hdb.db.Prepare(query)
+	stmt, err := hdb.Prepare(query)
 	if err != nil {
 		return err
 	}
@@ -595,7 +595,7 @@ func (hdb *HeraldDB) GetUniqueItem(table string, query interface{}, dest interfa
 
 	destArr := prepareDest(&rdest)
 
-	err = hdb.db.QueryRow(q, a...).Scan(destArr...)
+	err = hdb.QueryRow(q, a...).Scan(destArr...)
 	if err != nil {
 		return err
 	}
@@ -611,7 +611,7 @@ func (hdb *HeraldDB) GetGenre(genre Genre) (g Genre, err error) {
 }
 
 // addImageFile ...
-func addImageFile(db *sql.DB, fsPath string) {
+func (hdb *HeraldDB) addImageFile(fsPath string) {
 
 }
 
@@ -637,7 +637,7 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
 				}
 			}
 		case imageType:
-			addImageFile(hdb.db, fsPath)
+			hdb.addImageFile(fsPath)
 		}
 		return err
 	}

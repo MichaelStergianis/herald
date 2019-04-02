@@ -9,9 +9,9 @@ func (hdb *HeraldDB) GetUniqueArtist(artist Artist) (a Artist, err error) {
 	var row *sql.Row
 
 	if artist.ID != 0 {
-		row = hdb.db.QueryRow(baseQuery+"artists.id = $1", artist.ID)
+		row = hdb.QueryRow(baseQuery+"artists.id = $1", artist.ID)
 	} else if artist.Path != "" {
-		row = hdb.db.QueryRow(baseQuery+"artists.fs_path = $1", artist.Path)
+		row = hdb.QueryRow(baseQuery+"artists.fs_path = $1", artist.Path)
 	} else {
 		return Artist{}, ErrNonUnique
 	}
@@ -37,9 +37,9 @@ func (hdb *HeraldDB) GetUniqueGenre(genre Genre) (g Genre, err error) {
 	var row *sql.Row
 
 	if genre.ID != 0 {
-		row = hdb.db.QueryRow(baseQuery+"genres.id = $1", genre.ID)
+		row = hdb.QueryRow(baseQuery+"genres.id = $1", genre.ID)
 	} else if genre.Name != "" {
-		row = hdb.db.QueryRow(baseQuery+"genres.name = $1", genre.Name)
+		row = hdb.QueryRow(baseQuery+"genres.name = $1", genre.Name)
 	} else {
 		return Genre{}, ErrNonUnique
 	}
@@ -68,9 +68,9 @@ func (hdb *HeraldDB) GetUniqueSong(song Song) (s Song, err error) {
 	var row *sql.Row
 
 	if song.ID != 0 {
-		row = hdb.db.QueryRow(baseQuery+"songs.id = $1", song.ID)
+		row = hdb.QueryRow(baseQuery+"songs.id = $1", song.ID)
 	} else if song.Path != "" {
-		row = hdb.db.QueryRow(baseQuery+"songs.fs_path = $1", song.Path)
+		row = hdb.QueryRow(baseQuery+"songs.fs_path = $1", song.Path)
 	} else {
 		return Song{}, ErrNonUnique
 	}
@@ -110,9 +110,9 @@ func (hdb *HeraldDB) GetUniqueAlbum(album Album) (a Album, err error) {
 	var row *sql.Row
 
 	if album.ID != 0 {
-		row = hdb.db.QueryRow(baseQuery+"albums.id = $1", album.ID)
+		row = hdb.QueryRow(baseQuery+"albums.id = $1", album.ID)
 	} else if album.Path != "" {
-		row = hdb.db.QueryRow(baseQuery+"albums.fs_path = $1", album.Path)
+		row = hdb.QueryRow(baseQuery+"albums.fs_path = $1", album.Path)
 	} else {
 		return Album{}, ErrNonUnique
 	}
