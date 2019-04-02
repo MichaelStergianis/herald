@@ -382,48 +382,6 @@ func TestAddAlbum(t *testing.T) {
 	}
 }
 
-// TestScanLibrary ...
-func testScanLibrary(t *testing.T) {
-	// prepare the test library
-	prepareTestDatabase()
-	prepareTestLibrary()
-
-	artists, err := hdb.GetArtists()
-	if err != nil {
-		t.Error(err)
-	}
-
-	for _, artist := range artists {
-		fmt.Printf("%+v\n", artist)
-	}
-
-	testLibPath, err := filepath.Abs(testLibName)
-	if err != nil {
-		t.Error(err)
-	}
-	libs, err := hdb.GetLibraries()
-	if err != nil {
-		t.Error(err)
-	}
-	for _, lib := range libs {
-		if lib.Path == testLibPath {
-			fmt.Printf("%+v\n", lib)
-			hdb.ScanLibrary(lib)
-		}
-	}
-
-	fmt.Println()
-
-	artists, err = hdb.GetArtists()
-	if err != nil {
-		t.Error(err)
-	}
-
-	for _, artist := range artists {
-		fmt.Printf("%+v\n", artist)
-	}
-}
-
 // TestDuration ...
 func TestDuration(t *testing.T) {
 	prepareTestDatabase()
@@ -501,7 +459,8 @@ func TestGetSongsInLibrary(t *testing.T) {
 			Title: "Hangar 18",
 			Track: 1, NumTracks: 13, Disk: 1, NumDisks: 1,
 			Size: 99948, Duration: 9994,
-			Artist: "Megadeth"}}
+			Artist: "Megadeth"},
+	}
 
 	libs, err := hdb.GetLibraries()
 	if err != nil {
@@ -524,6 +483,31 @@ func TestGetSongsInLibrary(t *testing.T) {
 	}
 }
 
+// TestAddSongToLibrary ...
+func TestAddSongToLibrary(t *testing.T) {
+	prepareTestDatabase()
+	prepareTestLibrary()
+
+	testSong := path.Join(testLib, "GoldLink/At What Cost/02 Same Clothes as Yesterday.m4a")
+}
+
+// TestProcessMedia ...
+func TestProcessMedia(t *testing.T) {
+	prepareTestDatabase()
+	prepareTestLibrary()
+
+	libs, err := hdb.GetLibraries()
+	if err != nil {
+		t.Error(err)
+	}
+
+	testSong := path.Join(testLib, "GoldLink/At What Cost/02 Same Clothes as Yesterday.m4a")
+	err = hdb.processMedia(testSong, libs[testLibName])
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 // TestScanLibrary ...
 func TestScanLibrary(t *testing.T) {
 	prepareTestDatabase()
@@ -534,7 +518,7 @@ func TestScanLibrary(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Printf("%+v\n", libs)
+	fmt.Printf("%+v\n", libs[testLibName])
 
 	err = hdb.ScanLibrary(libs[testLibName])
 	if err != nil {
@@ -545,6 +529,8 @@ func TestScanLibrary(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	fmt.Printf("%v\n", songs)
 
 	for _, song := range songs {
 		fmt.Printf("%+v\n", song)

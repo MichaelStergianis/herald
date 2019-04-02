@@ -308,8 +308,14 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 	}
 
 	s.Album = album.ID
+	s.Genre = genre.ID
 
-	_, err = hdb.addSong(s)
+	s, err = hdb.addSong(s)
+	if err != nil {
+		return err
+	}
+
+	err = hdb.addSongToLibrary(s, lib)
 	if err != nil {
 		return err
 	}
@@ -454,6 +460,12 @@ func (hdb *HeraldDB) addGenre(genre Genre) (Genre, error) {
 		return g, nil
 	}
 
+	query := "INSERT INTO music.genres (name) VALUES ($1) RETURNING id"
+	err = hdb.db.QueryRow(query, genre.Name).Scan(&genre.ID)
+	if err != nil {
+		return Genre{}, err
+	}
+
 	return genre, err
 }
 
@@ -485,6 +497,31 @@ func (hdb *HeraldDB) addArtist(artist Artist) (a Artist, err error) {
 	a.Path = artist.Path
 
 	return a, nil
+}
+
+// addSongToLibrary ...
+func (hdb *HeraldDB) addSongToLibrary(song Song, lib Library) error {
+	sInL, err := hdb.songInLibrary(song, lib)
+	if err != nil {
+		return err
+	}
+
+	if sInL {
+		return nil
+	}
+
+	query := "INSERT INTO music.songs_in_library (song_id, library_id) VALUES ($1, $2)"
+	stmt, err := hdb.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(&song.ID, &lib.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // prepareUniqueQuery ...
@@ -592,6 +629,8 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
 		switch fileType(fsPath) {
 		case musicType:
 			{
+				fmt.Printf("lib: %v, song: %v\n", lib, fsPath)
+
 				err = hdb.processMedia(fsPath, lib)
 				if err != nil {
 					log.Printf("%v", err)

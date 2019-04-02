@@ -73,7 +73,8 @@ CREATE INDEX IF NOT EXISTS ix_songs ON music.songs (id, title);
 
 CREATE TABLE IF NOT EXISTS music.songs_in_library (
        song_id INTEGER REFERENCES music.songs(id),
-       library_id INTEGER REFERENCES music.libraries(id)
+       library_id INTEGER REFERENCES music.libraries(id),
+       PRIMARY KEY (song_id, library_id)
 );
 
 

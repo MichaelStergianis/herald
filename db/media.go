@@ -31,6 +31,7 @@ func marshall(src interface{}) (dest map[string]interface{}, err error) {
 	return dest, err
 }
 
+// unmarshal
 func unmarshal(src map[string]interface{}, dest interface{}) (err error) {
 	rdest := reflect.ValueOf(dest)
 	if rdest.Kind() != reflect.Ptr || rdest.IsNil() {
@@ -98,4 +99,10 @@ type Song struct {
 	Size      int     `edn:":size"       json:"size"       sql:"song_size"` // bytes
 	Duration  float64 `edn:":duration"   json:"duration"   sql:"duration"`  // seconds
 	Artist    string  `edn:":artist"     json:"artist"     sql:"artist"`
+}
+
+// SongInLibrary ...
+type SongInLibrary struct {
+	SongID    int64 `edn:":id" json:"id" sql:"id"`
+	LibraryID int64 `edn:":id" json:"id" sql:"id"`
 }
