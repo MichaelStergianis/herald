@@ -54,7 +54,7 @@ func Open(connStr string) (*HeraldDB, error) {
 // duration ...
 // Uses ffmpeg to get songs duration.
 func duration(song Song) (d float64, err error) {
-	cmd := exec.Command("ffprobe", song.Path)
+	cmd := exec.Command("ffprobe", song.path)
 	stderr := bytes.Buffer{}
 	cmd.Stderr = &stderr
 
@@ -97,36 +97,34 @@ func (hdb *HeraldDB) Close() {
 	hdb.DB.Close()
 }
 
-// isValidTable ...
+// GetValidTable ...
 // Checks to see if the table passed to CountTable is in the list of valid tables.
-func isValidTable(table string) bool {
+func GetValidTable(table string) (Queryable, bool) {
 	// create an empty type for our set
-	type empty struct{}
-
-	var validTables = map[string]empty{
+	var validTables = map[string]Queryable{
 		// music schema
-		"music.artists":          empty{},
-		"music.genres":           empty{},
-		"music.images":           empty{},
-		"music.albums":           empty{},
-		"music.images_in_album":  empty{},
-		"music.songs":            empty{},
-		"music.libraries":        empty{},
-		"music.songs_in_library": empty{},
+		"music.artists":          Artist{},
+		"music.genres":           Genre{},
+		"music.images":           Image{},
+		"music.albums":           Album{},
+		"music.images_in_album":  ImageInAlbum{},
+		"music.songs":            Song{},
+		"music.libraries":        Library{},
+		"music.songs_in_library": SongInLibrary{},
 
 		// config schema
-		"config.preferences": empty{},
-		"config.users":       empty{},
+		// "config.preferences": empty{},
+		// "config.users":       empty{},
 	}
 
-	_, inTable := validTables[table]
-	return inTable
+	q, ok := validTables[table]
+	return q, ok
 }
 
 // CountTable ...
 // Gets the count of a table in our database.
 func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
-	if !isValidTable(table) {
+	if _, ok := GetValidTable(table); !ok {
 		return 0, ErrInvalidTable
 	}
 
@@ -179,7 +177,7 @@ func (hdb *HeraldDB) GetLibraries() (libs map[string]Library, err error) {
 	libs = make(map[string]Library, count)
 	for i := 0; rows.Next(); i++ {
 		var l Library
-		err = rows.Scan(&l.ID, &l.Name, &l.Path)
+		err = rows.Scan(&l.ID, &l.Name, &l.path)
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +211,7 @@ func (hdb *HeraldDB) GetArtists() (artists []Artist, err error) {
 	artists = make([]Artist, count)
 	for i := 0; rows.Next(); i++ {
 		var a Artist
-		err = rows.Scan(&a.ID, &a.Name, &a.Path)
+		err = rows.Scan(&a.ID, &a.Name, &a.path)
 
 		if err != nil {
 			return nil, err
@@ -254,7 +252,7 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 
 	var s Song
 	s = Song{
-		Path:  fsPath,
+		path:  fsPath,
 		Title: metadata.Title(),
 	}
 
@@ -288,7 +286,7 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 	// Add the album artist information
 	artist, err := hdb.addArtist(Artist{
 		Name: metadata.AlbumArtist(),
-		Path: stripToArtist(fsPath, lib),
+		path: stripToArtist(fsPath, lib),
 	})
 	if err != nil {
 		return err
@@ -296,7 +294,7 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 
 	// Add the album information
 	album, err := hdb.addAlbum(Album{
-		Path:      stripToAlbum(fsPath, artist),
+		path:      stripToAlbum(fsPath, artist),
 		Artist:    artist.ID,
 		Year:      metadata.Year(),
 		NumTracks: s.NumTracks,
@@ -327,10 +325,10 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 // Checks to see if a song is in the given library.
 func (hdb *HeraldDB) songInLibrary(song Song, library Library) (inLib bool, err error) {
 	// get songs id based on path
-	if song.Path == "" {
+	if song.path == "" {
 		return false, ErrNonUnique
 	}
-	err = hdb.QueryRow("SELECT id FROM music.songs where fs_path = $1", song.Path).Scan(&song.ID)
+	err = hdb.QueryRow("SELECT id FROM music.songs where fs_path = $1", song.path).Scan(&song.ID)
 	if err != nil && !(err == sql.ErrNoRows) {
 		return false, err
 	}
@@ -407,7 +405,7 @@ func (hdb *HeraldDB) addSong(song Song) (s Song, err error) {
 		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
 
 	err = hdb.QueryRow(query, song.Album,
-		song.Genre, song.Path, song.Title, song.Track, song.NumTracks, song.Disk,
+		song.Genre, song.path, song.Title, song.Track, song.NumTracks, song.Disk,
 		song.NumDisks, song.Size, song.Duration, song.Artist).Scan(&song.ID)
 
 	if err != nil {
@@ -438,7 +436,7 @@ func (hdb *HeraldDB) addAlbum(album Album) (a Album, err error) {
 
 	err = hdb.QueryRow(query, album.Artist,
 		album.Year, album.NumTracks, album.NumDisks,
-		album.Title, album.Path).Scan(&album.ID)
+		album.Title, album.path).Scan(&album.ID)
 
 	if err != nil {
 		return Album{}, err
@@ -481,20 +479,20 @@ func (hdb *HeraldDB) addArtist(artist Artist) (a Artist, err error) {
 		return a, nil
 	}
 
-	if !path.IsAbs(artist.Path) {
+	if !path.IsAbs(artist.path) {
 		return Artist{}, ErrNotAbs
 	}
 
 	// add information from artist
 	query := "INSERT INTO music.artists (name, fs_path) VALUES ($1, $2) RETURNING id"
-	err = hdb.QueryRow(query, artist.Name, artist.Path).Scan(&a.ID)
+	err = hdb.QueryRow(query, artist.Name, artist.path).Scan(&a.ID)
 
 	if err != nil {
 		return Artist{}, err
 	}
 
 	a.Name = artist.Name
-	a.Path = artist.Path
+	a.path = artist.path
 
 	return a, nil
 }
@@ -578,13 +576,13 @@ func (hdb *HeraldDB) GetUniqueArtist(artist Artist) (a Artist, err error) {
 
 	if artist.ID != 0 {
 		row = hdb.QueryRow(baseQuery+"artists.id = $1", artist.ID)
-	} else if artist.Path != "" {
-		row = hdb.QueryRow(baseQuery+"artists.fs_path = $1", artist.Path)
+	} else if artist.path != "" {
+		row = hdb.QueryRow(baseQuery+"artists.fs_path = $1", artist.path)
 	} else {
 		return Artist{}, ErrNonUnique
 	}
 
-	err = row.Scan(&a.ID, &a.Name, &a.Path)
+	err = row.Scan(&a.ID, &a.Name, &a.path)
 
 	if err == sql.ErrNoRows {
 		return Artist{}, ErrNotPresent
@@ -637,8 +635,8 @@ func (hdb *HeraldDB) GetUniqueSong(song Song) (s Song, err error) {
 
 	if song.ID != 0 {
 		row = hdb.QueryRow(baseQuery+"songs.id = $1", song.ID)
-	} else if song.Path != "" {
-		row = hdb.QueryRow(baseQuery+"songs.fs_path = $1", song.Path)
+	} else if song.path != "" {
+		row = hdb.QueryRow(baseQuery+"songs.fs_path = $1", song.path)
 	} else {
 		return Song{}, ErrNonUnique
 	}
@@ -647,7 +645,7 @@ func (hdb *HeraldDB) GetUniqueSong(song Song) (s Song, err error) {
 		&s.ID,
 		&s.Album,
 		&s.Genre,
-		&s.Path,
+		&s.path,
 		&s.Title,
 		&s.Track,
 		&s.NumTracks,
@@ -679,8 +677,8 @@ func (hdb *HeraldDB) GetUniqueAlbum(album Album) (a Album, err error) {
 
 	if album.ID != 0 {
 		row = hdb.QueryRow(baseQuery+"albums.id = $1", album.ID)
-	} else if album.Path != "" {
-		row = hdb.QueryRow(baseQuery+"albums.fs_path = $1", album.Path)
+	} else if album.path != "" {
+		row = hdb.QueryRow(baseQuery+"albums.fs_path = $1", album.path)
 	} else {
 		return Album{}, ErrNonUnique
 	}
@@ -692,7 +690,7 @@ func (hdb *HeraldDB) GetUniqueAlbum(album Album) (a Album, err error) {
 		&a.NumTracks,
 		&a.NumDisks,
 		&a.Title,
-		&a.Path,
+		&a.path,
 		&a.Duration,
 	)
 
@@ -747,7 +745,7 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
 		return err
 	}
 
-	err = filepath.Walk(lib.Path, walkFn)
+	err = filepath.Walk(lib.path, walkFn)
 	if err != nil {
 		return err
 	}

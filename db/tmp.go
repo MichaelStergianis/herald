@@ -15,7 +15,7 @@ func prepareDest(rdest *reflect.Value) (destArr []interface{}) {
 // GetUniqueItem ...
 // Returns a unique item from the database. Requires an id.
 func (hdb *HeraldDB) GetUniqueItem(table string, query interface{}, dest interface{}) (err error) {
-	if !isValidTable(table) {
+	if _, ok := GetValidTable(table); !ok {
 		return ErrInvalidTable
 	}
 	rquery := reflect.ValueOf(query)
