@@ -16,6 +16,22 @@ import (
 
 const resourcesLoc string = "frontend/resources/public/"
 
+type server struct {
+	hdb    *heraldDB.HeraldDB
+	router *mux.Router
+}
+
+// newServer ...
+func newServer(connStr string) (serv server, err error) {
+	serv.hdb, err = heraldDB.Open(connStr)
+	if err != nil {
+		return server{}, err
+	}
+
+	serv.router = mux.NewRouter()
+	return serv, nil
+}
+
 // serveMusic ...
 func serveMusic(hdb *heraldDB.HeraldDB) func(w http.ResponseWriter, r *http.Request) {
 	f := func(w http.ResponseWriter, r *http.Request) {
@@ -28,11 +44,29 @@ func serveMusic(hdb *heraldDB.HeraldDB) func(w http.ResponseWriter, r *http.Requ
 	return f
 }
 
+// routes ...
+func (serv *server) addRoutes() *server {
+
+	// static
+	serv.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "frontend/resources/public/index.html")
+	})
+	serv.router.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(path.Join(resourcesLoc, "css")))))
+	serv.router.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
+	serv.router.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
+
+	serv.router.Handle("/artists/{id}", serv.NewArtistHandler())
+
+	return serv
+}
+
 func main() {
 	var err error
 	port := flag.Int("port", 8080, "The port on which to bind the server")
 	logfile := *flag.String("logfile", "", "The log file to use. Defaults to stdout.")
 	flag.Parse()
+
+	// args
 	portString := ":" + strconv.Itoa(*port)
 	if logfile != "" {
 		f, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -44,25 +78,13 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	hdb, err := heraldDB.Open("dbname=herald user=herald sslmode=disable")
+	serv, err := newServer("dbname=herald user=herald sslmode=disable")
 	check(err)
+	defer serv.hdb.Close()
 
-	defer hdb.Close()
+	serv.addRoutes()
 
-	// rest
-	http.HandleFunc("/stream", serveMusic(hdb))
-
-	router := mux.NewRouter()
-
-	// static
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "frontend/resources/public/index.html")
-	})
-	router.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(path.Join(resourcesLoc, "css")))))
-	router.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
-	router.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
-
-	err = http.ListenAndServe(portString, router)
+	err = http.ListenAndServe(portString, serv.router)
 	check(err)
 	return
 }
