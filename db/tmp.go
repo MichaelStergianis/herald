@@ -1,6 +1,71 @@
 package db
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+)
+
+// GetQueryable ...
+// Get a valid queryable table and a zero value back.
+func GetQueryable(table string) (Queryable, bool) {
+
+	var validTables = map[string]Queryable{
+		"music.artists":   &Artist{},
+		"music.genres":    &Genre{},
+		"music.images":    &Image{},
+		"music.albums":    &Album{},
+		"music.songs":     &Song{},
+		"music.libraries": &Library{},
+	}
+
+	q, ok := validTables[table]
+	return q, ok
+}
+
+// GetUniqueItem ...
+// Returns a unique item from the database. Requires an id.
+func (hdb *HeraldDB) GetUniqueItem(table string, query *Queryable) (err error) {
+	if _, ok := GetQueryable(table); !ok {
+		return ErrInvalidTable
+	}
+	rquery := reflect.ValueOf(query)
+
+	q, a := prepareUniqueQuery(table, rquery)
+
+	destArr := prepareDest(&rquery)
+
+	err = hdb.QueryRow(q, a...).Scan(destArr...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// prepareQuery ...
+func prepareQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
+	rqueryT := rquery.Type()
+
+	selections := make([]string, rquery.NumField())
+	wheres := make([]string, rquery.NumField())
+	args = make([]interface{}, rquery.NumField())
+
+	for i := 0; i < rquery.NumField(); i++ {
+		f := rqueryT.Field(i)
+		if tag, ok := f.Tag.Lookup("sql"); ok {
+			selections[i] = tag
+			wheres[i] = fmt.Sprintf("%s = $%d", tag, i+1)
+			args[i] = rquery.Field(i).Interface()
+		}
+	}
+
+	query = "SELECT " + strings.Join(selections, ", ") + " " +
+		"FROM " + table + " " +
+		"WHERE " + "(" + strings.Join(wheres, " AND ") + ");"
+
+	return query, args
+}
 
 // prepareDest ...
 func prepareDest(rdest *reflect.Value) (destArr []interface{}) {
@@ -12,26 +77,24 @@ func prepareDest(rdest *reflect.Value) (destArr []interface{}) {
 	return destArr
 }
 
-// GetUniqueItem ...
-// Returns a unique item from the database. Requires an id.
-func (hdb *HeraldDB) GetUniqueItem(table string, query interface{}, dest interface{}) (err error) {
-	if _, ok := GetValidTable(table); !ok {
-		return ErrInvalidTable
-	}
-	rquery := reflect.ValueOf(query)
-	rdest := reflect.ValueOf(dest)
-	if rdest.Kind() != reflect.Ptr || rdest.IsNil() {
-		return ErrReflection
-	}
+// prepareUniqueQuery ...
+func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
+	rqueryT := rquery.Type()
 
-	q, a := prepareUniqueQuery(table, rquery)
+	selections := make([]string, rquery.NumField())
+	args = make([]interface{}, 1)
+	args[0] = rquery.FieldByName("ID").Interface()
 
-	destArr := prepareDest(&rdest)
-
-	err = hdb.QueryRow(q, a...).Scan(destArr...)
-	if err != nil {
-		return err
+	for i := 0; i < rquery.NumField(); i++ {
+		f := rqueryT.Field(i)
+		if tag, ok := f.Tag.Lookup("sql"); ok {
+			selections[i] = tag
+		}
 	}
 
-	return nil
+	query = "SELECT " + strings.Join(selections, ", ") + " " +
+		"FROM " + table + " " +
+		"WHERE " + "(" + fmt.Sprintf("%s = $%d", "id", 1) + ");"
+
+	return query, args
 }

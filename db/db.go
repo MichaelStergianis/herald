@@ -12,10 +12,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strconv"
-	"strings"
 
 	// pq is used behind the scenes, but never explicitly used
 	_ "github.com/lib/pq"
@@ -99,32 +97,35 @@ func (hdb *HeraldDB) Close() {
 
 // GetValidTable ...
 // Checks to see if the table passed to CountTable is in the list of valid tables.
-func GetValidTable(table string) (Queryable, bool) {
+func GetValidTable(table string) bool {
 	// create an empty type for our set
-	var validTables = map[string]Queryable{
+	type empty struct{}
+	var validTables = map[string]struct{}{
 		// music schema
-		"music.artists":          Artist{},
-		"music.genres":           Genre{},
-		"music.images":           Image{},
-		"music.albums":           Album{},
-		"music.images_in_album":  ImageInAlbum{},
-		"music.songs":            Song{},
-		"music.libraries":        Library{},
-		"music.songs_in_library": SongInLibrary{},
+		"music.artists":   empty{},
+		"music.genres":    empty{},
+		"music.images":    empty{},
+		"music.albums":    empty{},
+		"music.songs":     empty{},
+		"music.libraries": empty{},
 
 		// config schema
 		// "config.preferences": empty{},
 		// "config.users":       empty{},
+
+		// Multiple IDs
+		"music.images_in_album":  empty{},
+		"music.songs_in_library": empty{},
 	}
 
-	q, ok := validTables[table]
-	return q, ok
+	_, ok := validTables[table]
+	return ok
 }
 
 // CountTable ...
 // Gets the count of a table in our database.
 func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
-	if _, ok := GetValidTable(table); !ok {
+	if ok := GetValidTable(table); !ok {
 		return 0, ErrInvalidTable
 	}
 
@@ -520,52 +521,6 @@ func (hdb *HeraldDB) addSongToLibrary(song Song, lib Library) error {
 	}
 
 	return nil
-}
-
-// prepareUniqueQuery ...
-func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
-	rqueryT := rquery.Type()
-
-	selections := make([]string, rquery.NumField())
-	args = make([]interface{}, 1)
-	args[0] = rquery.FieldByName("ID").Interface()
-
-	for i := 0; i < rquery.NumField(); i++ {
-		f := rqueryT.Field(i)
-		if tag, ok := f.Tag.Lookup("sql"); ok {
-			selections[i] = tag
-		}
-	}
-
-	query = "SELECT " + strings.Join(selections, ", ") + " " +
-		"FROM " + table + " " +
-		"WHERE " + "(" + fmt.Sprintf("%s = $%d", "id", 1) + ");"
-
-	return query, args
-}
-
-// prepareQuery ...
-func prepareQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
-	rqueryT := rquery.Type()
-
-	selections := make([]string, rquery.NumField())
-	wheres := make([]string, rquery.NumField())
-	args = make([]interface{}, rquery.NumField())
-
-	for i := 0; i < rquery.NumField(); i++ {
-		f := rqueryT.Field(i)
-		if tag, ok := f.Tag.Lookup("sql"); ok {
-			selections[i] = tag
-			wheres[i] = fmt.Sprintf("%s = $%d", tag, i+1)
-			args[i] = rquery.Field(i).Interface()
-		}
-	}
-
-	query = "SELECT " + strings.Join(selections, ", ") + " " +
-		"FROM " + table + " " +
-		"WHERE " + "(" + strings.Join(wheres, " AND ") + ");"
-
-	return query, args
 }
 
 // GetUniqueArtist ...

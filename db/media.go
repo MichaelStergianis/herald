@@ -12,6 +12,8 @@ const (
 
 // Queryable ...
 type Queryable interface {
+	GetID() int64
+	SetID(ID int64)
 }
 
 func marshall(src interface{}) (dest map[string]interface{}, err error) {
@@ -60,6 +62,16 @@ type Library struct {
 	path string `sql:"fs_path"`
 }
 
+// GetID ...
+func (l Library) GetID() int64 {
+	return l.ID
+}
+
+// SetID ...
+func (l *Library) SetID(ID int64) {
+	l.ID = ID
+}
+
 // Artist ...
 // A representation of an artist.
 type Artist struct {
@@ -68,11 +80,31 @@ type Artist struct {
 	path string `sql:"fs_path"`
 }
 
+// GetID ...
+func (a Artist) GetID() int64 {
+	return a.ID
+}
+
+// SetID ...
+func (a *Artist) SetID(ID int64) {
+	a.ID = ID
+}
+
 // Genre ...
 // Genre representation.
 type Genre struct {
 	ID   int64  `edn:":id"   json:"id"   sql:"id"`
 	Name string `edn:":name" json:"name" sql:"name"`
+}
+
+// GetID ...
+func (g Genre) GetID() int64 {
+	return g.ID
+}
+
+// SetID ...
+func (g *Genre) SetID(ID int64) {
+	g.ID = ID
 }
 
 // Album ...
@@ -86,6 +118,16 @@ type Album struct {
 	Title     string  `edn:":title"      json:"title"      sql:"title"`
 	path      string  `sql:"fs_path"`
 	Duration  float64 `edn:":duration"   json:"duration"   sql:"duration"` // seconds
+}
+
+// GetID ...
+func (a Album) GetID() int64 {
+	return a.ID
+}
+
+// SetID ...
+func (a *Album) SetID(ID int64) {
+	a.ID = ID
 }
 
 // Song ...
@@ -105,6 +147,16 @@ type Song struct {
 	Artist    string  `edn:":artist"     json:"artist"     sql:"artist"`
 }
 
+// GetID ...
+func (s Song) GetID() int64 {
+	return s.ID
+}
+
+// SetID ...
+func (s *Song) SetID(ID int64) {
+	s.ID = ID
+}
+
 // SongInLibrary ...
 type SongInLibrary struct {
 	SongID    int64 `edn:":song-id" json:"lib-id" sql:"song_id"`
@@ -115,6 +167,16 @@ type SongInLibrary struct {
 type Image struct {
 	ID   int64  `edn:":id"   json:"id"   sql:"id"`
 	path string `sql:"fs_path"`
+}
+
+// GetID ...
+func (i Image) GetID() int64 {
+	return i.ID
+}
+
+// SetID ...
+func (i *Image) SetID(ID int64) {
+	i.ID = ID
 }
 
 // ImageInAlbum ...
