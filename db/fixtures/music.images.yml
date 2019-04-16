@@ -1,0 +1,6 @@
+# music.images.yml
+- id: 1
+  fs_path: /home/test/Music/BADBADNOTGOOD/III/cover.jpg
+
+- id: 2
+  fs_path: /home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul/cover.jpg
