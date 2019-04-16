@@ -2,8 +2,8 @@
 - id: 1
   artist: 1
   release_year: 2011
-  n_tracks: 20
-  n_disks: 1
+  num_tracks: 20
+  num_disks: 1
   title: III
   fs_path: /home/test/Music/BADBADNOTGOOD/III
   duration: 1688
@@ -11,8 +11,8 @@
 - id: 2
   artist: 2
   release_year: 2001
-  n_tracks: 10
-  n_disks: 1
+  num_tracks: 10
+  num_disks: 1
   title: Sour Soul
   fs_path: /home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul
   duration: 1800
@@ -20,8 +20,8 @@
 - id: 3
   artist: 3
   release_year: 1980
-  n_tracks: 8
-  n_disks: 1
+  num_tracks: 8
+  num_disks: 1
   title: Killers
   fs_path: /home/tests/MyMusic/Iron Maiden/Killers
   duration: 15440
@@ -29,8 +29,8 @@
 - id: 4
   artist: 4
   release_year: 1985
-  n_tracks: 13
-  n_disks: 1
+  num_tracks: 13
+  num_disks: 1
   title: Rust in Peace
   fs_path: /home/test/Music/Rush/Rust in Peace
   duration: 1756

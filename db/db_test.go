@@ -66,7 +66,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	fixtures, err = testfixtures.NewFolder(hdb.db, &testfixtures.PostgreSQL{UseAlterConstraint: true}, "fixtures")
+	fixtures, err = testfixtures.NewFolder(hdb.DB, &testfixtures.PostgreSQL{UseAlterConstraint: true}, "fixtures")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestAddLibrary(t *testing.T) {
 		t.Error(err)
 	}
 
-	row := hdb.db.QueryRow("SELECT libraries.name, libraries.fs_path FROM music.libraries WHERE (libraries.name = $1)",
+	row := hdb.QueryRow("SELECT libraries.name, libraries.fs_path FROM music.libraries WHERE (libraries.name = $1)",
 		expected.Name)
 
 	var result Library
@@ -488,7 +488,7 @@ func TestAddSongToLibrary(t *testing.T) {
 	prepareTestDatabase()
 	prepareTestLibrary()
 
-	testSong := path.Join(testLib, "GoldLink/At What Cost/02 Same Clothes as Yesterday.m4a")
+	// testSong := path.Join(testLib, "GoldLink/At What Cost/02 Same Clothes as Yesterday.m4a")
 }
 
 // TestProcessMedia ...
@@ -547,18 +547,16 @@ func TestGetUniqueItem(t *testing.T) {
 		Path: "/home/test/Music/BADBADNOTGOOD",
 	}
 
-	query := Artist{
+	query := &Artist{
 		ID: 1,
 	}
 
-	dest := new(Artist)
-
-	err := hdb.GetUniqueItem("music.artists", query, dest)
+	err := hdb.GetUniqueItem("music.artists", query)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if verify != *dest {
+	if verify != *query {
 		t.Error("result did not match expected")
 	}
 
