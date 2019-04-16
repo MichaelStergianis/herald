@@ -13,6 +13,19 @@ import (
 	"olympos.io/encoding/edn"
 )
 
+type template struct {
+	url    string
+	table  string
+	query  heraldDB.Queryable
+	answer heraldDB.Queryable
+}
+
+type encoder struct {
+	name string
+	enc  func(interface{}) ([]byte, error)
+	dec  func([]byte, interface{}) error
+}
+
 // badRequestErr ...
 func badRequestErr(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusBadRequest)
@@ -28,6 +41,19 @@ func (serv *server) addRoutes() *server {
 	serv.router.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(path.Join(resourcesLoc, "css")))))
 	serv.router.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
 	serv.router.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
+
+	// encoders := []encoder{
+	// 	{"/edn/", edn.Marshal, edn.Unmarshal},
+	// 	{"/json/", json.Marshal, json.Unmarshal},
+	// }
+
+	// templates := []template{
+	// 	{},
+	// }
+
+	// for _, enc := range encoders {
+	// 	subrouter := serv.router.PathPrefix(enc.name).Subrouter()
+	// }
 
 	// edn
 	ednEncoder := edn.Marshal

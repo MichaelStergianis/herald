@@ -41,17 +41,6 @@ func TestMain(m *testing.M) {
 
 // TestNewMediaHandler ...
 func TestNewMediaHandler(t *testing.T) {
-	type template struct {
-		url    string
-		table  string
-		temp   heraldDB.Queryable
-		answer heraldDB.Queryable
-	}
-	type encoder struct {
-		name string
-		enc  func(interface{}) ([]byte, error)
-		dec  func([]byte, interface{}) error
-	}
 	encoders := [...]encoder{
 		{"json", json.Marshal, json.Unmarshal},
 		{"edn", edn.Marshal, edn.Unmarshal},
@@ -80,30 +69,30 @@ func TestNewMediaHandler(t *testing.T) {
 	// test cases
 	for _, enc := range encoders {
 		for _, temp := range templates {
-			req, err := http.NewRequest("GET", fmt.Sprintf("/?id=%d", temp.temp.GetID()), nil)
+			req, err := http.NewRequest("GET", fmt.Sprintf("/?id=%d", temp.query.GetID()), nil)
 
 			if err != nil {
 				t.Errorf("could not create request for %s", temp.table)
 			}
 			rr := httptest.NewRecorder()
 
-			handler := serv.NewMediaHandler(temp.table, enc.name, enc.enc, temp.temp)
+			handler := serv.NewMediaHandler(temp.table, enc.name, enc.enc, temp.query)
 			handler.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusOK {
 				t.Errorf("handler for %s returned status code %v", temp.url, rr.Code)
 			}
 
-			err = enc.dec(rr.Body.Bytes(), temp.temp)
+			err = enc.dec(rr.Body.Bytes(), temp.query)
 			if err != nil {
 				t.Errorf("encountered error decoding response: %v", err)
 			}
 
 			// reflection required to test that they work
-			result := reflect.ValueOf(temp.temp).Elem().Interface()
+			result := reflect.ValueOf(temp.query).Elem().Interface()
 			expected := reflect.ValueOf(temp.answer).Elem().Interface()
 			if result != expected {
-				t.Errorf("response did not match expected\n\tresponse: %+v\n\tanswer: %+v", temp.temp, temp.answer)
+				t.Errorf("response did not match expected\n\tresponse: %+v\n\tanswer: %+v", temp.query, temp.answer)
 			}
 
 		}
