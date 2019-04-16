@@ -25,7 +25,7 @@ func GetQueryable(table string) (Queryable, bool) {
 
 // GetUniqueItem ...
 // Returns a unique item from the database. Requires an id.
-func (hdb *HeraldDB) GetUniqueItem(table string, query *Queryable) (err error) {
+func (hdb *HeraldDB) GetUniqueItem(table string, query Queryable) (err error) {
 	if _, ok := GetQueryable(table); !ok {
 		return ErrInvalidTable
 	}
@@ -41,6 +41,15 @@ func (hdb *HeraldDB) GetUniqueItem(table string, query *Queryable) (err error) {
 	}
 
 	return nil
+}
+
+// NewFromQueryable ...
+func NewFromQueryable(q Queryable) Queryable {
+	t := reflect.TypeOf(q)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return reflect.New(t).Interface().(Queryable)
 }
 
 // prepareQuery ...
@@ -72,13 +81,18 @@ func prepareDest(rdest *reflect.Value) (destArr []interface{}) {
 	rdestVal := rdest.Elem()
 	destArr = make([]interface{}, rdestVal.NumField())
 	for i := 0; i < rdestVal.NumField(); i++ {
-		destArr[i] = rdestVal.Field(i).Addr().Interface()
+		if rdestVal.Field(i).CanInterface() {
+			destArr[i] = rdestVal.Field(i).Addr().Interface()
+		}
 	}
 	return destArr
 }
 
 // prepareUniqueQuery ...
 func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
+	if rquery.Kind() == reflect.Ptr {
+		rquery = rquery.Elem()
+	}
 	rqueryT := rquery.Type()
 
 	selections := make([]string, rquery.NumField())

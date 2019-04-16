@@ -1,10 +1,15 @@
 .PHONY: run
 
+DBPATH=gitlab.stergianis.ca/herald/db
+
 run: compile
 	./herald
 
-compile: main.go
+compile-db:
+	go build ${DBPATH}
 	go install gitlab.stergianis.ca/herald/db
+
+compile: main.go routes.go routes_test.go compile-db
 	go build -v
 
 test:

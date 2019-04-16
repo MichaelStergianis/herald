@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -22,10 +21,11 @@ type server struct {
 }
 
 // newServer ...
-func newServer(connStr string) (serv server, err error) {
+func newServer(connStr string) (serv *server, err error) {
+	serv = &server{}
 	serv.hdb, err = heraldDB.Open(connStr)
 	if err != nil {
-		return server{}, err
+		return &server{}, err
 	}
 
 	serv.router = mux.NewRouter()
@@ -42,22 +42,6 @@ func serveMusic(hdb *heraldDB.HeraldDB) func(w http.ResponseWriter, r *http.Requ
 
 	}
 	return f
-}
-
-// routes ...
-func (serv *server) addRoutes() *server {
-
-	// static
-	serv.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "frontend/resources/public/index.html")
-	})
-	serv.router.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(path.Join(resourcesLoc, "css")))))
-	serv.router.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
-	serv.router.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
-
-	serv.router.Handle("/artists/{id}", serv.NewArtistHandler())
-
-	return serv
 }
 
 func main() {

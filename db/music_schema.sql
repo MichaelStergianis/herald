@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS music.albums (
        artist INTEGER REFERENCES music.artists(id),
 
        release_year INTEGER,
-       n_tracks INTEGER NOT NULL, -- number of songs
-       n_disks INTEGER NOT NULL,  -- number of disks
+       num_tracks INTEGER NOT NULL, -- number of songs
+       num_disks INTEGER NOT NULL,  -- number of disks
        title VARCHAR NOT NULL,
        fs_path VARCHAR UNIQUE NOT NULL,
        duration DOUBLE PRECISION -- seconds
