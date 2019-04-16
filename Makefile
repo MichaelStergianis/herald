@@ -7,7 +7,7 @@ run: compile
 
 compile-db:
 	go build ${DBPATH}
-	go install gitlab.stergianis.ca/michael/herald/db
+	go install ${DBPATH}
 
 compile: main.go routes.go routes_test.go compile-db
 	go build -v
