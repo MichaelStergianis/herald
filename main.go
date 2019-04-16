@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
-	heraldDB "gitlab.stergianis.ca/herald/db"
+	heraldDB "gitlab.stergianis.ca/michael/herald/db"
 )
 
 const resourcesLoc string = "frontend/resources/public/"

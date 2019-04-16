@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	heraldDB "gitlab.stergianis.ca/herald/db"
+	heraldDB "gitlab.stergianis.ca/michael/herald/db"
 	"gopkg.in/testfixtures.v2"
 	"olympos.io/encoding/edn"
 )
@@ -57,32 +57,24 @@ func TestNewMediaHandler(t *testing.T) {
 		{"edn", edn.Marshal, edn.Unmarshal},
 	}
 	templates := [...]template{
-		{"/libraries/", "music.libraries", &heraldDB.Library{ID: 1}, &heraldDB.Library{ID: 1, Name: "Music", Path: "/home/test/Music"}},
+		{"/libraries/", "music.libraries", &heraldDB.Library{ID: 1}, &heraldDB.Library{ID: 1, Name: "Music"}},
 
 		{"/genres/", "music.genres", &heraldDB.Genre{ID: 1}, &heraldDB.Genre{ID: 1, Name: "Jazz"}},
 
-		{"/artists/", "music.artists", &heraldDB.Artist{ID: 1}, &heraldDB.Artist{
-			ID: 1, Name: "BADBADNOTGOOD", Path: "/home/test/Music/BADBADNOTGOOD",
-		}},
+		{"/artists/", "music.artists", &heraldDB.Artist{ID: 1}, &heraldDB.Artist{ID: 1, Name: "BADBADNOTGOOD"}},
 
 		{"/albums/", "music.albums", &heraldDB.Album{ID: 1}, &heraldDB.Album{
-			ID: 1, Artist: 1, Year: 2011,
-			NumTracks: 20, NumDisks: 1,
-			Title: "III", Path: "/home/test/Music/BADBADNOTGOOD/III",
-			Duration: 1688,
+			ID: 1, Artist: 1, Year: 2011, NumTracks: 20,
+			NumDisks: 1, Title: "III", Duration: 1688,
 		}},
 
 		{"/songs/", "music.songs", &heraldDB.Song{ID: 1}, &heraldDB.Song{
-			ID: 1, Album: 1, Genre: 1,
-			Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
-			Title: "In the Night", Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
+			ID: 1, Album: 1, Genre: 1, Title: "In the Night",
+			Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
 			Size: 204192, Duration: 1993, Artist: "BADBADNOTGOOD",
 		}},
 
-		{"/images/", "music.images", &heraldDB.Image{ID: 1}, &heraldDB.Image{
-			ID:   1,
-			Path: "/home/test/Music/BADBADNOTGOOD/III/cover.jpg",
-		}},
+		{"/images/", "music.images", &heraldDB.Image{ID: 1}, &heraldDB.Image{ID: 1}},
 	}
 
 	// test cases

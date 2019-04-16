@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	heraldDB "gitlab.stergianis.ca/herald/db"
+	heraldDB "gitlab.stergianis.ca/michael/herald/db"
 	"olympos.io/encoding/edn"
 )
 
@@ -33,14 +33,14 @@ func (serv *server) addRoutes() *server {
 	ednEncoder := edn.Marshal
 	album := &heraldDB.Album{}
 	edn := serv.router.PathPrefix("/edn/").Subrouter()
-	edn.Handle("/artists/", serv.NewArtistHandler(ednEncoder))
-	edn.Handle("/albums/", serv.NewMediaHandler("music.albums", "edn", ednEncoder, album))
+	edn.Handle("/artist/", serv.NewArtistHandler(ednEncoder))
+	edn.Handle("/album/", serv.NewMediaHandler("music.albums", "edn", ednEncoder, album))
 
 	// json
 	jsonEncoder := json.Marshal
 	json := serv.router.PathPrefix("/json/").Subrouter()
-	json.Handle("/artists/", serv.NewArtistHandler(jsonEncoder))
-	json.Handle("/albums/", serv.NewMediaHandler("music.albums", "json", jsonEncoder, album))
+	json.Handle("/artist/", serv.NewArtistHandler(jsonEncoder))
+	json.Handle("/album/", serv.NewMediaHandler("music.albums", "json", jsonEncoder, album))
 
 	return serv
 }
@@ -52,11 +52,13 @@ func (serv *server) NewArtistHandler(encoder func(interface{}) ([]byte, error)) 
 		idS, ok := params["id"]
 		if !ok {
 			badRequestErr(w, errors.New("No ID supplied"))
+			return
 		}
 
 		id, err := strconv.Atoi(idS)
 		if err != nil {
 			badRequestErr(w, err)
+			return
 		}
 		a := heraldDB.Artist{
 			ID: int64(id),
@@ -65,11 +67,13 @@ func (serv *server) NewArtistHandler(encoder func(interface{}) ([]byte, error)) 
 		a, err = serv.hdb.GetUniqueArtist(a)
 		if err != nil {
 			badRequestErr(w, err)
+			return
 		}
 
 		response, err := encoder(a)
 		if err != nil {
 			badRequestErr(w, err)
+			return
 		}
 
 		w.Write(response)
