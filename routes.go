@@ -13,11 +13,10 @@ import (
 	"olympos.io/encoding/edn"
 )
 
-type template struct {
-	url    string
-	table  string
-	query  heraldDB.Queryable
-	answer heraldDB.Queryable
+type record struct {
+	url   string
+	table string
+	query heraldDB.Queryable
 }
 
 type encoder struct {
@@ -42,31 +41,29 @@ func (serv *server) addRoutes() *server {
 	serv.router.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
 	serv.router.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
 
-	// encoders := []encoder{
-	// 	{"/edn/", edn.Marshal, edn.Unmarshal},
-	// 	{"/json/", json.Marshal, json.Unmarshal},
-	// }
+	encoders := []encoder{
+		{"edn", edn.Marshal, edn.Unmarshal},
+		{"json", json.Marshal, json.Unmarshal},
+	}
 
-	// templates := []template{
-	// 	{},
-	// }
+	records := []record{
+		{"/library/", "music.libraries", &heraldDB.Library{}},
+		{"/artist/", "music.artists", &heraldDB.Artist{}},
+		{"/album/", "music.albums", &heraldDB.Album{}},
+		{"/genre/", "music.genres", &heraldDB.Genre{}},
+		{"/song/", "music.songs", &heraldDB.Song{}},
+		{"/image/", "music.images", &heraldDB.Image{}},
+	}
 
-	// for _, enc := range encoders {
-	// 	subrouter := serv.router.PathPrefix(enc.name).Subrouter()
-	// }
-
-	// edn
-	ednEncoder := edn.Marshal
-	album := &heraldDB.Album{}
-	edn := serv.router.PathPrefix("/edn/").Subrouter()
-	edn.Handle("/artist/", serv.NewArtistHandler(ednEncoder))
-	edn.Handle("/album/", serv.NewMediaHandler("music.albums", "edn", ednEncoder, album))
-
-	// json
-	jsonEncoder := json.Marshal
-	json := serv.router.PathPrefix("/json/").Subrouter()
-	json.Handle("/artist/", serv.NewArtistHandler(jsonEncoder))
-	json.Handle("/album/", serv.NewMediaHandler("music.albums", "json", jsonEncoder, album))
+	for _, enc := range encoders {
+		subrouter := serv.router.PathPrefix("/" + enc.name + "/").Subrouter()
+		for _, rec := range records {
+			// add the record type to the subrouter
+			subrouter.
+				HandleFunc(rec.url, serv.NewUniqueGetHandler(rec.table, enc.name, enc.enc, rec.query)).
+				Methods("GET")
+		}
+	}
 
 	return serv
 }
@@ -106,9 +103,9 @@ func (serv *server) NewArtistHandler(encoder func(interface{}) ([]byte, error)) 
 	}
 }
 
-// NewMediaHandler ...
+// NewUniqueGetHandler ...
 // Expects a database object, a table name, and a type to use.
-func (serv *server) NewMediaHandler(tableName string, encStr string, encoder func(interface{}) ([]byte, error), template heraldDB.Queryable) http.HandlerFunc {
+func (serv *server) NewUniqueGetHandler(tableName string, encStr string, encoder func(interface{}) ([]byte, error), template heraldDB.Queryable) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := heraldDB.NewFromQueryable(template)
 

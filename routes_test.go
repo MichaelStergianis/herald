@@ -41,58 +41,64 @@ func TestMain(m *testing.M) {
 
 // TestNewMediaHandler ...
 func TestNewMediaHandler(t *testing.T) {
+
 	encoders := [...]encoder{
 		{"json", json.Marshal, json.Unmarshal},
 		{"edn", edn.Marshal, edn.Unmarshal},
 	}
-	templates := [...]template{
-		{"/libraries/", "music.libraries", &heraldDB.Library{ID: 1}, &heraldDB.Library{ID: 1, Name: "Music"}},
+	records := [...]record{
+		{"/libraries/", "music.libraries", &heraldDB.Library{ID: 1}},
+		{"/genres/", "music.genres", &heraldDB.Genre{ID: 1}},
+		{"/artists/", "music.artists", &heraldDB.Artist{ID: 1}},
+		{"/albums/", "music.albums", &heraldDB.Album{ID: 1}},
+		{"/songs/", "music.songs", &heraldDB.Song{ID: 1}},
+		{"/images/", "music.images", &heraldDB.Image{ID: 1}},
+	}
 
-		{"/genres/", "music.genres", &heraldDB.Genre{ID: 1}, &heraldDB.Genre{ID: 1, Name: "Jazz"}},
-
-		{"/artists/", "music.artists", &heraldDB.Artist{ID: 1}, &heraldDB.Artist{ID: 1, Name: "BADBADNOTGOOD"}},
-
-		{"/albums/", "music.albums", &heraldDB.Album{ID: 1}, &heraldDB.Album{
+	answers := [...]heraldDB.Queryable{
+		&heraldDB.Library{ID: 1, Name: "Music"},
+		&heraldDB.Genre{ID: 1, Name: "Jazz"},
+		&heraldDB.Artist{ID: 1, Name: "BADBADNOTGOOD"},
+		&heraldDB.Album{
 			ID: 1, Artist: 1, Year: 2011, NumTracks: 20,
 			NumDisks: 1, Title: "III", Duration: 1688,
-		}},
-
-		{"/songs/", "music.songs", &heraldDB.Song{ID: 1}, &heraldDB.Song{
+		},
+		&heraldDB.Song{
 			ID: 1, Album: 1, Genre: 1, Title: "In the Night",
 			Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
 			Size: 204192, Duration: 1993, Artist: "BADBADNOTGOOD",
-		}},
-
-		{"/images/", "music.images", &heraldDB.Image{ID: 1}, &heraldDB.Image{ID: 1}},
+		},
+		&heraldDB.Image{ID: 1},
 	}
 
 	// test cases
 	for _, enc := range encoders {
-		for _, temp := range templates {
-			req, err := http.NewRequest("GET", fmt.Sprintf("/?id=%d", temp.query.GetID()), nil)
+		for idx, rec := range records {
+			req, err := http.NewRequest("GET", fmt.Sprintf("/?id=%d", rec.query.GetID()), nil)
 
 			if err != nil {
-				t.Errorf("could not create request for %s", temp.table)
+				t.Errorf("could not create request for %s", rec.table)
 			}
 			rr := httptest.NewRecorder()
 
-			handler := serv.NewMediaHandler(temp.table, enc.name, enc.enc, temp.query)
+			handler := serv.NewUniqueGetHandler(rec.table, enc.name, enc.enc, rec.query)
 			handler.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusOK {
-				t.Errorf("handler for %s returned status code %v", temp.url, rr.Code)
+				t.Errorf("handler for %s returned status code %v", rec.url, rr.Code)
 			}
 
-			err = enc.dec(rr.Body.Bytes(), temp.query)
+			err = enc.dec(rr.Body.Bytes(), rec.query)
 			if err != nil {
 				t.Errorf("encountered error decoding response: %v", err)
 			}
 
 			// reflection required to test that they work
-			result := reflect.ValueOf(temp.query).Elem().Interface()
-			expected := reflect.ValueOf(temp.answer).Elem().Interface()
+			result := reflect.ValueOf(rec.query).Elem().Interface()
+			expected := reflect.ValueOf(answers[idx]).Elem().Interface()
 			if result != expected {
-				t.Errorf("response did not match expected\n\tresponse: %+v\n\tanswer: %+v", temp.query, temp.answer)
+				t.Errorf("response did not match expected\n\tresponse: %+v\n\tanswer: %+v",
+					rec.query, answers[idx])
 			}
 
 		}
