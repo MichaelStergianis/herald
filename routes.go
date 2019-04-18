@@ -2,13 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"path"
 	"strconv"
 
-	"github.com/gorilla/mux"
 	heraldDB "gitlab.stergianis.ca/michael/herald/db"
 	"olympos.io/encoding/edn"
 )
@@ -66,41 +64,6 @@ func (serv *server) addRoutes() *server {
 	}
 
 	return serv
-}
-
-// NewArtistHandler ...
-func (serv *server) NewArtistHandler(encoder func(interface{}) ([]byte, error)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		params := mux.Vars(r)
-		idS, ok := params["id"]
-		if !ok {
-			badRequestErr(w, errors.New("No ID supplied"))
-			return
-		}
-
-		id, err := strconv.Atoi(idS)
-		if err != nil {
-			badRequestErr(w, err)
-			return
-		}
-		a := heraldDB.Artist{
-			ID: int64(id),
-		}
-
-		a, err = serv.hdb.GetUniqueArtist(a)
-		if err != nil {
-			badRequestErr(w, err)
-			return
-		}
-
-		response, err := encoder(a)
-		if err != nil {
-			badRequestErr(w, err)
-			return
-		}
-
-		w.Write(response)
-	}
 }
 
 // NewUniqueGetHandler ...
