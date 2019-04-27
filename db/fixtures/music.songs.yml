@@ -50,3 +50,16 @@
   song_size: 99948
   duration: 9994
   artist: Megadeth
+
+- id: 5
+  album: 1
+  genre: 1
+  fs_path: /home/test/Music/BADBADNOTGOOD/III/02 Triangle.mp3
+  title: Triangle
+  track: 2
+  num_tracks: 20
+  disk: 1
+  num_disks: 1
+  song_size: 204299
+  duration: 1999
+  artist: BADBADNOTGOOD
