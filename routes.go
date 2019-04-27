@@ -1,15 +1,29 @@
+// routes.go
+//
+// This file describes the routes that the server supports. Herald
+// currently supports two data formats for rest communication, json
+// and edn.
+//
+// For submitting calls to the rest api, all provided data uses the
+// "data" argument name. The data should be of the form of the
+// corresponding format.
+//
 package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
+	"log"
 	"net/http"
 	"path"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	heraldDB "gitlab.stergianis.ca/michael/herald/db"
 	"olympos.io/encoding/edn"
 )
+
+type encFunc func(interface{}) ([]byte, error)
 
 type record struct {
 	url   string
@@ -26,6 +40,7 @@ type encoder struct {
 // badRequestErr ...
 func badRequestErr(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusBadRequest)
+	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(err.Error()))
 }
 
@@ -45,12 +60,12 @@ func (serv *server) addRoutes() *server {
 	}
 
 	records := []record{
-		{"/library/", "music.libraries", &heraldDB.Library{}},
-		{"/artist/", "music.artists", &heraldDB.Artist{}},
-		{"/album/", "music.albums", &heraldDB.Album{}},
-		{"/genre/", "music.genres", &heraldDB.Genre{}},
-		{"/song/", "music.songs", &heraldDB.Song{}},
-		{"/image/", "music.images", &heraldDB.Image{}},
+		{"/library", "music.libraries", &heraldDB.Library{}},
+		{"/artist", "music.artists", &heraldDB.Artist{}},
+		{"/album", "music.albums", &heraldDB.Album{}},
+		{"/genre", "music.genres", &heraldDB.Genre{}},
+		{"/song", "music.songs", &heraldDB.Song{}},
+		{"/image", "music.images", &heraldDB.Image{}},
 	}
 
 	for _, enc := range encoders {
@@ -58,7 +73,12 @@ func (serv *server) addRoutes() *server {
 		for _, rec := range records {
 			// add the record type to the subrouter
 			subrouter.
-				HandleFunc(rec.url, serv.NewUniqueGetHandler(rec.table, enc.name, enc.enc, rec.query)).
+				HandleFunc(rec.url+"/{id}", serv.NewUniqueQueryHandler(rec.table, enc, rec.query)).
+				Methods("GET")
+
+			// non unique
+			subrouter.
+				HandleFunc(rec.url+"s/", serv.NewQueryHandler(rec.table, enc, rec.query)).
 				Methods("GET")
 		}
 	}
@@ -66,13 +86,17 @@ func (serv *server) addRoutes() *server {
 	return serv
 }
 
-// NewUniqueGetHandler ...
+// NewUniqueQueryHandler ...
 // Expects a database object, a table name, and a type to use.
-func (serv *server) NewUniqueGetHandler(tableName string, encStr string, encoder func(interface{}) ([]byte, error), template heraldDB.Queryable) http.HandlerFunc {
+func (serv *server) NewUniqueQueryHandler(tableName string, enc encoder, queryType heraldDB.Queryable) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		query := heraldDB.NewFromQueryable(template)
+		query := heraldDB.NewFromQueryable(queryType)
 
-		id, err := strconv.Atoi(r.FormValue("id"))
+		params := mux.Vars(r)
+
+		sID := params["id"]
+
+		id, err := strconv.Atoi(sID)
 		if err != nil {
 			badRequestErr(w, err)
 			return
@@ -85,14 +109,69 @@ func (serv *server) NewUniqueGetHandler(tableName string, encStr string, encoder
 			return
 		}
 
-		response, err := encoder(query)
+		response, err := enc.enc(query)
 		if err != nil {
 			badRequestErr(w, err)
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", fmt.Sprintf("application/%s", encStr))
+		w.Header().Set("Content-Type", "application/"+enc.name)
+		w.Write(response)
+	}
+}
+
+// NewQueryHandler ...
+// Creates a general purpose query handler. Will always write an array of arrays of values for response.
+//
+// data    - Format corresponding to the encoder.
+// orderby - Specifies the field by which to order the data, and is optional.
+func (serv *server) NewQueryHandler(tableName string, enc encoder, queryType interface{}) http.HandlerFunc {
+	const orderField = "orderby"
+	validFields, err := heraldDB.ValidFields(enc.name, queryType)
+	if err != nil {
+		log.Panicln("Error creating new query handler:", err)
+	}
+	validFields[orderField] = struct{}{}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		query := heraldDB.NewFromInterface(queryType)
+		data, ok := r.URL.Query()["data"]
+		if !ok {
+			badRequestErr(w, errors.New("no data provided"))
+			return
+		}
+
+		var results []interface{}
+
+		orderBy := r.URL.Query()["orderby"]
+
+		if len(orderBy) == 0 {
+			orderBy = append(orderBy, "")
+		}
+
+		for _, d := range data {
+			// construct the query
+			err := enc.dec([]byte(d), query)
+			if err != nil {
+				badRequestErr(w, err)
+				return
+			}
+
+			result, err := serv.hdb.GetItem(tableName, query, orderBy[0])
+			if err != nil {
+				badRequestErr(w, err)
+				return
+			}
+			results = append(results, result)
+		}
+		response, err := enc.enc(results)
+		if err != nil {
+			badRequestErr(w, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/"+enc.name)
 		w.Write(response)
 	}
 }

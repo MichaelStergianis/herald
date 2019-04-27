@@ -19,5 +19,11 @@ var (
 	ErrReflection = errors.New("hdb: unmarshalling encountered a nil value or a non-pointer")
 
 	// ErrInvalidTable ...
+	// Returned when an invalid table is requested.
 	ErrInvalidTable = errors.New("hdb: invalid table")
+
+	// ErrInvalidTag ...
+	// Returned when requesting a field that is not present in a
+	// reflected type.
+	ErrInvalidTag = errors.New("hdb: invalid tag type")
 )

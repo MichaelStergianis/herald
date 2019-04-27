@@ -13,4 +13,5 @@ compile: main.go routes.go routes_test.go compile-db
 	go build -v
 
 test:
-	go test -v ./...
+	go test -coverprofile=db/coverage.out gitlab.stergianis.ca/michael/herald/db
+	go test -coverprofile=coverage.out

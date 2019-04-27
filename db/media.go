@@ -54,6 +54,26 @@ func unmarshal(src map[string]interface{}, dest interface{}) (err error) {
 	return nil
 }
 
+// ValidFields ...
+func ValidFields(tag string, query interface{}) (map[string]struct{}, error) {
+	m := map[string]struct{}{}
+	qType := reflect.TypeOf(query)
+	if qType.Kind() == reflect.Ptr {
+		qType = qType.Elem()
+	}
+	_, ok := qType.Field(0).Tag.Lookup(tag)
+	if !ok {
+		return nil, ErrInvalidTag
+	}
+
+	for i := 0; i < qType.NumField(); i++ {
+		f, _ := qType.Field(i).Tag.Lookup(tag)
+		m[f] = struct{}{}
+	}
+
+	return m, nil
+}
+
 // Library ...
 // A representation of a library.
 type Library struct {

@@ -52,6 +52,15 @@ func NewFromQueryable(q Queryable) Queryable {
 	return reflect.New(t).Interface().(Queryable)
 }
 
+// NewFromInterface ...
+func NewFromInterface(i interface{}) interface{} {
+	t := reflect.TypeOf(i)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return reflect.New(t).Interface()
+}
+
 // prepareQuery ...
 func prepareQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
 	rqueryT := rquery.Type()
@@ -78,7 +87,10 @@ func prepareQuery(table string, rquery reflect.Value) (query string, args []inte
 
 // prepareDest ...
 func prepareDest(rdest *reflect.Value) (destArr []interface{}) {
-	rdestVal := rdest.Elem()
+	rdestVal := *rdest
+	if rdestVal.Kind() == reflect.Ptr {
+		rdestVal = rdestVal.Elem()
+	}
 	destArr = make([]interface{}, rdestVal.NumField())
 	for i := 0; i < rdestVal.NumField(); i++ {
 		if rdestVal.Field(i).CanInterface() {
@@ -111,4 +123,88 @@ func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args 
 		"WHERE " + "(" + fmt.Sprintf("%s = $%d", "id", 1) + ");"
 
 	return query, args
+}
+
+// IsZero ...
+func IsZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
+}
+
+// GetItem ...
+// GetItem searches the database for an item matching the query type,
+// using the queries fields.
+//
+// Order by is optional, if you pass the empty string it will be ignored.
+func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, orderBy string) ([]interface{}, error) {
+	if !GetValidTable(tableName) {
+		return nil, ErrInvalidTable
+	}
+
+	rQuery := reflect.ValueOf(queryType)
+	if rQuery.Kind() == reflect.Ptr {
+		rQuery = rQuery.Elem()
+	}
+	rType := rQuery.Type()
+
+	var (
+		whereQuery = "WHERE "
+		vals       = make([]interface{}, 1, rQuery.NumField())
+	)
+	selectQ := "SELECT "
+	fromQ := "FROM " + tableName + " "
+
+	idx := 1
+	for i := 0; i < rQuery.NumField(); i++ {
+		f := rQuery.Field(i)
+		if tag, ok := rType.Field(i).Tag.Lookup("sql"); ok {
+			// add tag to selection query
+			selectQ += tag + " "
+			if i < rQuery.NumField()-1 {
+				selectQ += ", "
+			}
+
+			// if corresponding value is a non zero value, use it as
+			// part of the query
+			if !IsZero(f) {
+				whereQuery += tag + " = " + fmt.Sprintf("$%d", idx) + " "
+				vals[idx-1] = f.Interface()
+				idx++
+			}
+		}
+	}
+
+	query := selectQ + fromQ + whereQuery + ";"
+
+	rows, err := hdb.Query(query, vals...)
+	if err != nil {
+		return nil, err
+	}
+
+	var results = []interface{}{}
+	for rows.Next() {
+		r := reflect.New(rType)
+		r = r.Elem()
+
+		destArr := prepareDest(&r)
+
+		rows.Scan(destArr...)
+
+		results = append(results, r.Interface())
+	}
+
+	return results, nil
 }

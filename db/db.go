@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math"
@@ -687,7 +686,7 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
 		switch fileType(fsPath) {
 		case musicType:
 			{
-				fmt.Printf("lib: %v, song: %v\n", lib, fsPath)
+				// fmt.Printf("lib: %v, song: %v\n", lib, fsPath)
 
 				err = hdb.processMedia(fsPath, lib)
 				if err != nil {
