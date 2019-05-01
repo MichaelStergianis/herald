@@ -1,0 +1,4 @@
+{:open-url false
+ :watch-dirs ["src"]
+ :css-dirs ["resources/public/css"]
+ :target-dir "resources/"}

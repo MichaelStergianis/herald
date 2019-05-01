@@ -1,0 +1,3 @@
+{:main frontend.core
+ :output-dir "resources/public/js/"
+ :output-to "resources/public/js/frontend.js"}
