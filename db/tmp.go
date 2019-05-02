@@ -161,11 +161,11 @@ func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, orderBy st
 	rType := rQuery.Type()
 
 	var (
-		whereQuery = "WHERE "
-		vals       = make([]interface{}, 1, rQuery.NumField())
+		vals = make([]interface{}, 0)
 	)
 	selectQ := "SELECT "
 	fromQ := "FROM " + tableName + " "
+	whereQuery := "WHERE "
 
 	idx := 1
 	for i := 0; i < rQuery.NumField(); i++ {
@@ -181,10 +181,15 @@ func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, orderBy st
 			// part of the query
 			if !IsZero(f) {
 				whereQuery += tag + " = " + fmt.Sprintf("$%d", idx) + " "
-				vals[idx-1] = f.Interface()
+				vals = append(vals, f.Interface())
 				idx++
 			}
 		}
+	}
+
+	if len(vals) < 1 {
+		// no where clause necessary if no data provided
+		whereQuery = ""
 	}
 
 	query := selectQ + fromQ + whereQuery + ";"

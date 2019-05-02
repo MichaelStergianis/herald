@@ -12,7 +12,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"path"
@@ -137,16 +136,15 @@ func (serv *server) NewQueryHandler(tableName string, enc encoder, queryType int
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := heraldDB.NewFromInterface(queryType)
 		data, ok := r.URL.Query()["data"]
+		// if data is not given, return all articles matching that data type
 		if !ok {
-			badRequestErr(w, errors.New("no data provided"))
-			return
+			data = []string{`{}`}
 		}
 
 		var results []interface{}
 
-		orderBy := r.URL.Query()["orderby"]
-
-		if len(orderBy) == 0 {
+		orderBy, ok := r.URL.Query()["orderby"]
+		if len(orderBy) == 0 || !ok {
 			orderBy = append(orderBy, "")
 		}
 
