@@ -47,11 +47,11 @@ func badRequestErr(w http.ResponseWriter, err error) {
 func (serv *server) addRoutes() *server {
 	// static
 	serv.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "frontend/resources/public/index.html")
+		http.ServeFile(w, r, path.Join(resourcesLoc, "index.html"))
 	})
-	serv.router.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(path.Join(resourcesLoc, "css")))))
-	serv.router.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
-	serv.router.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
+	serv.router.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir(path.Join(resourcesLoc, "css")))))
+	serv.router.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.Dir(path.Join(resourcesLoc, "img")))))
+	serv.router.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir(path.Join(resourcesLoc, "js")))))
 
 	encoders := []encoder{
 		{"edn", edn.Marshal, edn.Unmarshal},
