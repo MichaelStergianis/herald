@@ -1,4 +1,8 @@
 (ns frontend.state
-  (:require [reagent.core :as r :refer [atom]]))
+  (:require [reagent.core :as r]))
 
-(def state (r/atom {}))
+(defonce active (r/atom :random))
+(defonce artists (r/atom (vector)))
+(defonce albums (r/atom (vector)))
+(defonce sidebar-open (r/atom false))
+

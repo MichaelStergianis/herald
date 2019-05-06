@@ -1,5 +1,6 @@
-(ns frontend.core
-  (:require [frontend.ui   :refer [base]]
+(ns ^:figwheel-hooks frontend.core
+  (:require [cljss.core :as css]
+            [frontend.ui   :refer [base]]
             [frontend.util :as util :refer [by-id]]
             [reagent.core  :as r    :refer [atom]]))
 
@@ -9,9 +10,11 @@
   (r/render-component [base] (by-id "app")))
 
 (defn -main []
+  (.setAttribute (.-body js/document) "style" "margin: 0px;")
   (render!))
 
-(defn on-js-reload []
+(defn ^:after-load on-js-reload []
+  (css/remove-styles!)
   (-main))
 
 (-main)
