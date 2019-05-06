@@ -13,4 +13,8 @@ pom.xml
 .nrepl-port
 
 # ignore generated cljs files
-frontend/resources/public/cljs-out/
+resources/public/cljs-out/
+resources/public/js/
+resources/public/css/fontawesome-free-5.1.1-web/
+resources/public/css/line-awesome/
+resources/public/css/line-awesome.zip
