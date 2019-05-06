@@ -44,14 +44,25 @@
    :height (str height "px")
    :display "inline"})
 
-(defstyles navbar-toggle []
-  {:height "inherit"
+(defstyles navbar-toggle [height-and-width]
+  {:height "48px"
+   :width  "48px"
    :background-color "inherit"
    :cursor "pointer"
    :outline "none"
    :border "none"
-   :font-size "16px"
+   :font-size "18px"
    :color white})
+
+(defstyles circle-bounding []
+  {:border-radius "50%"
+   :padding "4px"
+   :-webkit-shape-outside "circle()"
+   :shape-outside "circle()"
+   :transition "background-color 0.1s ease-in-out"})
+
+(defstyles color-on-active [color]
+  {:background-color color})
 
 (defstyles navbar-brand []
   {:height "inherit"
@@ -88,8 +99,23 @@
 (defstyles sidebar-li-active []
   {:background-color "#e8e8e8"})
 
+(defstyles sidebar-li-icon []
+  {:font-size "18px"})
+
 (defstyles sidebar-li-a []
   {})
 
 (defstyles right []
   {:float "right"})
+
+(defstyles sr-only []
+  {:border "0"
+   :clip "rect(1px, 1px, 1px, 1px)"
+   :clip-path "inset(50%)"
+   :height "1px"
+   :margin "-1px"
+   :overflow "hidden"
+   :padding "0"
+   :position "absolute"
+   :width "1px"
+   :word-wrap "normal !important"})

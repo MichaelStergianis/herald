@@ -2,13 +2,13 @@
   (:require [reagent.core :as r]
             [clojure.string :refer [lower-case]]
             [cljss.reagent :refer-macros [defstyled]]
-            [frontend.styles :as styles :refer [compose]]
+            [frontend.styles :as s :refer [compose]]
             [frontend.util     :as util :refer [by-id]]
             [frontend.requests :as req]
-            [frontend.state    :as state]))
+            [frontend.data    :as data]))
 
 (defn set-active! [k]
-  (reset! state/active k))
+  (reset! data/active k))
 
 (defonce navbar-height 48)
 (defonce medium-bar-divisor 4)
@@ -24,68 +24,88 @@
    :height "100%"})
 
 (defn random []
-  [padded-div "Random"])
+  (let [get-random-songs
+        (fn []
+          )]
+    (fn []
+      [padded-div "Random"])))
 
 (defn artists []
-  (req/get-all "artists" state/artists "name")
+  (req/get-all "artists" data/artists "name")
   (fn []
     [padded-div {:id "artists"}
-     (for [artist @state/artists]
+     (for [artist @data/artists]
        [:div {:key (str "artist-" (artist :id))} (artist :name)])]))
 
 (defn albums []
-  (req/get-all "albums" state/albums "title")
+  (req/get-all "albums" data/albums "title")
   (fn []
     [padded-div {:id "albums"}
-     (for [album @state/albums]
+     (for [album @data/albums]
        [:div {:key (str "album-" (album :id))} (album :title)])]))
+
+(defn sidebar-toggle []
+  (let [button-active (r/atom false)]
+    (fn []
+      [:button {:class (compose (s/navbar-toggle navbar-height))
+                :on-click (fn [] (reset! button-active (not @button-active)) (reset! data/sidebar-open (not @data/sidebar-open)))}
+       [:span {:class (s/sr-only)} "Toggle Navigation"]
+       [:i {:class (compose (if @button-active (s/color-on-active s/secondary)) (s/circle-bounding) "la la-bars")}]])))
+
+(defn options-toggle []
+  (let [button-active (r/atom false)]
+    (fn []
+      [:button {:class (compose (s/navbar-toggle navbar-height) (s/right))
+                :on-click (fn [] (reset! button-active (not @button-active)))}
+       [:span {:class (s/sr-only)} "Options"]
+       [:i {:class (compose (if @button-active (s/color-on-active s/secondary)) (s/circle-bounding) "la la-ellipsis-v")}]])))
 
 (defn navbar
   "Creates a navigation bar"
   []
   (fn []
-    [:div#nav-area {:class (styles/navbar)}
-     [:div {:class (styles/above-nav (int (/ navbar-height medium-bar-divisor)))}]
-     [:div {:class (styles/between-above-nav (int (/ navbar-height small-bar-divisor)))}]
-     [:div {:class (compose (styles/pad-in-start 5) (styles/navbar-nav navbar-height))}
+    [:div#nav-area {:class (s/navbar)}
+     [:div {:class (s/above-nav (int (/ navbar-height medium-bar-divisor)))}]
+     [:div {:class (s/between-above-nav (int (/ navbar-height small-bar-divisor)))}]
+     [:div {:class (compose (s/pad-in-start 5) (s/navbar-nav navbar-height))}
       ;; toggle
-      [:button {:class (styles/navbar-toggle)
-                :on-click #(reset! state/sidebar-open (not @state/sidebar-open))}
-       [:span.sr-only "Toggle Navigation"]
-       [:i {:class "fas fa-bars"}]]
+      [sidebar-toggle]
       ;; logo
       [:a.navbar-brand
        {:class (compose
-                (styles/pad-in-start 10)
-                (styles/navbar-brand))
-        :on-click #(set-active! :random)} "herald"]]]))
+                (s/pad-in-start 10)
+                (s/navbar-brand))
+        :on-click #(set-active! :random)} "herald"]
+      ;; options
+      [options-toggle]]]))
 
 (defn sidebar-li-click-event! [this keyw]
   (fn [e]
-    (reset! state/sidebar-open false)
+    (reset! data/sidebar-open false)
     (set-active! keyw)))
 
 (defn sidebar []
   (let [this (r/current-component)]
     (fn []
       [:div {:class (compose
-                     (styles/sidebar (.-innerHeight js/window) total-navbar-height sidebar-width)
-                     (if @state/sidebar-open (styles/sidebar-open)))}
-       [:ul {:class (styles/sidebar-ul)}
-        (doall (for [item [{:name "Artists" :class "fas fa-user"}
-                           {:name "Albums" :class "fas fa-compact-disc"}]]
+                     (s/sidebar (.-innerHeight js/window) total-navbar-height sidebar-width)
+                     (if @data/sidebar-open (s/sidebar-open)))}
+       [:ul {:class (s/sidebar-ul)}
+        (doall (for [item [{:name "Random" :class "la la-random"}
+                           {:name "Artists" :class "la la-user"}
+                           {:name "Albums" :class "la la-folder-open"}]]
                  (let [keyw (keyword (lower-case (item :name)))]
                    [:li {:key (item :name)
                          :class (compose
-                                 (styles/sidebar-li 5)
-                                 (if (= @state/active keyw) (styles/sidebar-li-active)))
+                                 (s/sidebar-li 5)
+                                 (if (= @data/active keyw) (s/sidebar-li-active)))
                          :on-click (sidebar-li-click-event! this keyw)}
                     [:a {:class (compose
                                  (item :class)
-                                 (styles/sidebar-li-a))}]
-                    [:a {:class (compose (styles/sidebar-li-a)
-                                         (styles/pad-in-start 8)
-                                         (styles/right))
+                                 (s/sidebar-li-icon))}]
+                    [:a {:class (compose (s/sidebar-li-a)
+                                         (s/pad-in-start 8)
+                                         (s/right))
                          :style {:padding-right 5}} (item :name)]])))]])))
 
 (defn player []
@@ -95,7 +115,7 @@
   [:div
    [navbar]
    [sidebar]
-   (case @state/active
+   (case @data/active
      :random [random]
      :artists [artists]
      :albums [albums]

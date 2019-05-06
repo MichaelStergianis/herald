@@ -1,4 +1,4 @@
-(ns frontend.state
+(ns frontend.data
   (:require [reagent.core :as r]))
 
 (defonce active (r/atom :random))
