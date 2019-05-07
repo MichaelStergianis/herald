@@ -18,6 +18,9 @@
 (def bg-primary {:background-color primary :color white})
 (def bg-secondary {:background-color secondary :color white})
 
+(defstyles roboto-font []
+  {:font-family "Roboto, sans-serif"})
+
 (defstyles pad-in-start [padding]
   {:padding-left (str padding "px")})
 

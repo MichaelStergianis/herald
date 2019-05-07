@@ -62,36 +62,35 @@
        [:span {:class (s/sr-only)} "Options"]
        [:i {:class (compose (if @button-active (s/color-on-active s/secondary)) (s/circle-bounding) "la la-ellipsis-v")}]])))
 
-(defn sidebar-li-click-event! [this keyw]
+(defn sidebar-li-click-event! [keyw]
   (fn [e]
     (reset! data/sidebar-open false)
     (set-active! keyw)))
 
 (defn sidebar []
-  (let [this (r/current-component)]
-    (fn []
-      [:div {:class (compose
-                     ;; subtracting 1 from the innerheight prevents
-                     ;; the sidebar from exceeding the viewport size
-                     (s/sidebar (- (.-innerHeight js/window) 1) total-navbar-height sidebar-width)
-                     (if @data/sidebar-open (s/sidebar-open)))}
-       [:ul {:class (s/sidebar-ul)}
-        (doall (for [item [{:name "Random" :class "la la-random"}
-                           {:name "Artists" :class "la la-user"}
-                           {:name "Albums" :class "la la-folder-open"}]]
-                 (let [keyw (keyword (lower-case (item :name)))]
-                   [:li {:key (item :name)
-                         :class (compose
-                                 (s/sidebar-li 5)
-                                 (if (= @data/active keyw) (s/sidebar-li-active)))
-                         :on-click (sidebar-li-click-event! this keyw)}
-                    [:a {:class (compose
-                                 (item :class)
-                                 (s/sidebar-li-icon))}]
-                    [:a {:class (compose (s/sidebar-li-a)
-                                         (s/pad-in-start 8)
-                                         (s/right))
-                         :style {:padding-right 5}} (item :name)]])))]])))
+  (fn []
+    [:div {:class (compose
+                   ;; subtracting 1 from the innerheight prevents
+                   ;; the sidebar from exceeding the viewport size
+                   (s/sidebar (- (.-innerHeight js/window) 1) total-navbar-height sidebar-width)
+                   (if @data/sidebar-open (s/sidebar-open)))}
+     [:ul {:class (s/sidebar-ul)}
+      (doall (for [item [{:name "Random" :class "la la-random"}
+                         {:name "Artists" :class "la la-user"}
+                         {:name "Albums" :class "la la-folder-open"}]]
+               (let [keyw (keyword (lower-case (item :name)))]
+                 [:li {:key (item :name)
+                       :class (compose
+                               (s/sidebar-li 5)
+                               (if (= @data/active keyw) (s/sidebar-li-active)))
+                       :on-click (sidebar-li-click-event! keyw)}
+                  [:a {:class (compose
+                               (item :class)
+                               (s/sidebar-li-icon))}]
+                  [:a {:class (compose (s/sidebar-li-a)
+                                       (s/pad-in-start 8)
+                                       (s/right))
+                       :style {:padding-right 5}} (item :name)]])))]]))
 
 (defn navbar
   "Creates a navigation bar"
@@ -116,7 +115,7 @@
   [:audio {:id "player-html5"}])
 
 (defn base []
-  [:div
+  [:div {:class (s/roboto-font)}
    [navbar]
    [sidebar]
    (case @data/active
