@@ -144,12 +144,35 @@ func IsZero(v reflect.Value) bool {
 	return false
 }
 
+// NewTagConverter ...
+func NewTagConverter(queryType interface{}, from, to string) (converter map[string]string) {
+	converter = map[string]string{}
+	rValue := reflect.ValueOf(queryType)
+	if rValue.Kind() == reflect.Ptr {
+		rValue = rValue.Elem()
+	}
+	rType := rValue.Type()
+	// err checking
+	for i := 0; i < rType.NumField(); i++ {
+		ft := rType.Field(i)
+		fv := rValue.Field(i)
+		if fv.CanInterface() {
+			fromTag, fromOk := ft.Tag.Lookup(from)
+			toTag, toOk := ft.Tag.Lookup(to)
+			if fromOk && toOk {
+				converter[fromTag] = toTag
+			}
+		}
+	}
+	return converter
+}
+
 // GetItem ...
 // GetItem searches the database for an item matching the query type,
 // using the queries fields.
 //
-// Order by is optional, if you pass the empty string it will be ignored.
-func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, orderBy string) ([]interface{}, error) {
+// Order by is optional, if you pass an empty array it will be ignored. Otherwise it will pass the column names to
+func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, converter map[string]string, orderBy []string) ([]interface{}, error) {
 	if !GetValidTable(tableName) {
 		return nil, ErrInvalidTable
 	}
@@ -192,7 +215,22 @@ func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, orderBy st
 		whereQuery = ""
 	}
 
-	query := selectQ + fromQ + whereQuery + ";"
+	query := selectQ + fromQ + whereQuery
+	if len(orderBy) > 0 {
+		orderQuery := "ORDER BY "
+		for i, encTag := range orderBy {
+			sqlTag, ok := converter[encTag]
+			if !ok {
+				return []interface{}{}, ErrInvalidTag
+			}
+			orderQuery += sqlTag
+			if i < len(orderBy)-1 {
+				orderQuery += ", "
+			}
+		}
+		query += orderQuery
+	}
+	query += ";"
 
 	rows, err := hdb.Query(query, vals...)
 	if err != nil {

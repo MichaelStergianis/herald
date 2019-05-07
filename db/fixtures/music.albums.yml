@@ -34,3 +34,12 @@
   title: Rust in Peace
   fs_path: /home/test/Music/Megadeth/Rust in Peace
   duration: 1756
+
+- id: 5
+  artist: 1
+  release_year: 2012
+  num_tracks: 19
+  num_disks: 1
+  title: IV
+  fs_path: /home/test/Music/BADBADNOTGOOD/IV
+  duration: 1688

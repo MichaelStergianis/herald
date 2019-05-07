@@ -133,6 +133,8 @@ func (serv *server) NewQueryHandler(tableName string, enc encoder, queryType int
 	}
 	validFields[orderField] = struct{}{}
 
+	converter := heraldDB.NewTagConverter(queryType, enc.name, "sql")
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := heraldDB.NewFromInterface(queryType)
 		data, ok := r.URL.Query()["data"]
@@ -143,10 +145,7 @@ func (serv *server) NewQueryHandler(tableName string, enc encoder, queryType int
 
 		var results []interface{}
 
-		orderBy, ok := r.URL.Query()["orderby"]
-		if len(orderBy) == 0 || !ok {
-			orderBy = append(orderBy, "")
-		}
+		var orderBy []string = r.URL.Query()["orderby"]
 
 		for _, d := range data {
 			// construct the query
@@ -156,7 +155,7 @@ func (serv *server) NewQueryHandler(tableName string, enc encoder, queryType int
 				return
 			}
 
-			result, err := serv.hdb.GetItem(tableName, query, orderBy[0])
+			result, err := serv.hdb.GetItem(tableName, query, converter, orderBy)
 			if err != nil {
 				badRequestErr(w, err)
 				return

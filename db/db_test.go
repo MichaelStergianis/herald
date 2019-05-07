@@ -556,36 +556,91 @@ func TestGetUniqueItem(t *testing.T) {
 func TestGetItem(t *testing.T) {
 	prepareDB()
 
-	testSong := Song{
-		Artist: "BADBADNOTGOOD",
+	testCases := [...]struct {
+		table   string
+		query   interface{}
+		encName string
+		orderby []string
+		answer  []interface{}
+	}{
+		{"music.songs", Song{Artist: "BADBADNOTGOOD"}, "edn", []string{},
+			[]interface{}{
+				Song{ID: 1, Album: 1, Genre: 1,
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
+					Title: "In the Night",
+					Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
+					Size: 204192, Duration: 1993,
+					Artist: "BADBADNOTGOOD"},
+				Song{ID: 5, Album: 1, Genre: 1,
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/02 Triangle.mp3",
+					Title: "Triangle",
+					Track: 2, NumTracks: 20, Disk: 1, NumDisks: 1,
+					Size: 204299, Duration: 1999,
+					Artist: "BADBADNOTGOOD"}}},
+		// order by single element
+		{"music.albums", Album{Artist: 1}, "json", []string{"num-tracks"},
+			[]interface{}{
+				Album{ID: 5, Artist: 1, Year: 2012,
+					NumTracks: 19, NumDisks: 1, Duration: 1688,
+					Title: "IV", Path: "/home/test/Music/BADBADNOTGOOD/IV"},
+				Album{ID: 1, Artist: 1, Year: 2011,
+					NumTracks: 20, NumDisks: 1, Duration: 1688,
+					Title: "III", Path: "/home/test/Music/BADBADNOTGOOD/III"},
+			},
+		},
+
+		// order by multiple elemnts
+		{"music.albums", Album{NumDisks: 1}, "edn", []string{"duration", "num-tracks"},
+			[]interface{}{
+				Album{ID: 5, Artist: 1, Year: 2012,
+					NumTracks: 19, NumDisks: 1, Duration: 1688,
+					Title: "IV", Path: "/home/test/Music/BADBADNOTGOOD/IV"},
+				Album{ID: 1, Artist: 1, Year: 2011,
+					NumTracks: 20, NumDisks: 1, Duration: 1688,
+					Title: "III", Path: "/home/test/Music/BADBADNOTGOOD/III"},
+				Album{ID: 4, Artist: 4, Year: 1985,
+					NumTracks: 13, NumDisks: 1, Duration: 1756,
+					Title: "Rust in Peace", Path: "/home/test/Music/Megadeth/Rust in Peace"},
+				Album{ID: 2, Artist: 2, Year: 2001,
+					NumTracks: 10, NumDisks: 1, Duration: 1800,
+					Title: "Sour Soul", Path: "/home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul"},
+				Album{ID: 3, Artist: 3, Year: 1980,
+					NumTracks: 8, NumDisks: 1, Duration: 15440,
+					Title: "Killers", Path: "/home/tests/MyMusic/Iron Maiden/Killers"},
+			}},
+		{"music.albums", Album{NumDisks: 1}, "edn", []string{"duration", "year"},
+			[]interface{}{
+				Album{ID: 1, Artist: 1, Year: 2011,
+					NumTracks: 20, NumDisks: 1, Duration: 1688,
+					Title: "III", Path: "/home/test/Music/BADBADNOTGOOD/III"},
+				Album{ID: 5, Artist: 1, Year: 2012,
+					NumTracks: 19, NumDisks: 1, Duration: 1688,
+					Title: "IV", Path: "/home/test/Music/BADBADNOTGOOD/IV"},
+				Album{ID: 4, Artist: 4, Year: 1985,
+					NumTracks: 13, NumDisks: 1, Duration: 1756,
+					Title: "Rust in Peace", Path: "/home/test/Music/Megadeth/Rust in Peace"},
+				Album{ID: 2, Artist: 2, Year: 2001,
+					NumTracks: 10, NumDisks: 1, Duration: 1800,
+					Title: "Sour Soul", Path: "/home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul"},
+				Album{ID: 3, Artist: 3, Year: 1980,
+					NumTracks: 8, NumDisks: 1, Duration: 15440,
+					Title: "Killers", Path: "/home/tests/MyMusic/Iron Maiden/Killers"},
+			}},
 	}
 
-	verifySongs := []Song{
-		{ID: 1, Album: 1, Genre: 1,
-			Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
-			Title: "In the Night",
-			Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
-			Size: 204192, Duration: 1993,
-			Artist: "BADBADNOTGOOD"},
+	for _, test := range testCases {
+		converter := NewTagConverter(test.query, test.encName, "sql")
+		results, err := hdb.GetItem(test.table, test.query, converter, test.orderby)
 
-		{ID: 5, Album: 1, Genre: 1,
-			Path:  "/home/test/Music/BADBADNOTGOOD/III/02 Triangle.mp3",
-			Title: "Triangle",
-			Track: 2, NumTracks: 20, Disk: 1, NumDisks: 1,
-			Size: 204299, Duration: 1999,
-			Artist: "BADBADNOTGOOD"},
-	}
+		if err != nil {
+			t.Error(err)
+		}
 
-	results, err := hdb.GetItem("music.songs", testSong, "")
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	for i := range results {
-		if verifySongs[i] != results[i] {
-			t.Error(fmt.Errorf("test case %d failed\n\t%9s %+v\n\t%-9s %+v", i, "expected:", verifySongs[i], "result:", results[i]))
+		for i := range results {
+			if test.answer[i] != results[i] {
+				t.Error(fmt.Errorf("test case %d failed\n\t%9s %+v\n\t%-9s %+v",
+					i, "expected:", test.answer[i], "result:", results[i]))
+			}
 		}
 	}
-
 }
