@@ -62,25 +62,6 @@
        [:span {:class (s/sr-only)} "Options"]
        [:i {:class (compose (if @button-active (s/color-on-active s/secondary)) (s/circle-bounding) "la la-ellipsis-v")}]])))
 
-(defn navbar
-  "Creates a navigation bar"
-  []
-  (fn []
-    [:div#nav-area {:class (s/navbar)}
-     [:div {:class (s/above-nav (int (/ navbar-height medium-bar-divisor)))}]
-     [:div {:class (s/between-above-nav (int (/ navbar-height small-bar-divisor)))}]
-     [:div {:class (compose (s/pad-in-start 5) (s/navbar-nav navbar-height))}
-      ;; toggle
-      [sidebar-toggle]
-      ;; logo
-      [:a.navbar-brand
-       {:class (compose
-                (s/pad-in-start 10)
-                (s/navbar-brand))
-        :on-click #((toggle-sidebar-visibility!) (set-active! :random))} "herald"]
-      ;; options
-      [options-toggle]]]))
-
 (defn sidebar-li-click-event! [this keyw]
   (fn [e]
     (reset! data/sidebar-open false)
@@ -90,7 +71,9 @@
   (let [this (r/current-component)]
     (fn []
       [:div {:class (compose
-                     (s/sidebar (.-innerHeight js/window) total-navbar-height sidebar-width)
+                     ;; subtracting 1 from the innerheight prevents
+                     ;; the sidebar from exceeding the viewport size
+                     (s/sidebar (- (.-innerHeight js/window) 1) total-navbar-height sidebar-width)
                      (if @data/sidebar-open (s/sidebar-open)))}
        [:ul {:class (s/sidebar-ul)}
         (doall (for [item [{:name "Random" :class "la la-random"}
@@ -109,6 +92,25 @@
                                          (s/pad-in-start 8)
                                          (s/right))
                          :style {:padding-right 5}} (item :name)]])))]])))
+
+(defn navbar
+  "Creates a navigation bar"
+  []
+  (fn []
+    [:div#nav-area {:class (s/navbar)}
+     [:div {:class (s/above-nav (int (/ navbar-height medium-bar-divisor)))}]
+     [:div {:class (s/between-above-nav (int (/ navbar-height small-bar-divisor)))}]
+     [:div {:class (compose (s/pad-in-start 5) (s/navbar-nav navbar-height))}
+      ;; toggle
+      [sidebar-toggle]
+      ;; logo
+      [:a.navbar-brand
+       {:class (compose
+                (s/pad-in-start 10)
+                (s/navbar-brand))
+        :on-click #((toggle-sidebar-visibility!) (set-active! :random))} "herald"]
+      ;; options
+      [options-toggle]]]))
 
 (defn player []
   [:audio {:id "player-html5"}])
