@@ -44,13 +44,15 @@
      (for [album @data/albums]
        [:div {:key (str "album-" (album :id))} (album :title)])]))
 
+(defn toggle-sidebar-visibility! []
+  (reset! data/sidebar-open (not @data/sidebar-open)))
+
 (defn sidebar-toggle []
-  (let [button-active (r/atom false)]
-    (fn []
-      [:button {:class (compose (s/navbar-toggle navbar-height))
-                :on-click (fn [] (reset! button-active (not @button-active)) (reset! data/sidebar-open (not @data/sidebar-open)))}
-       [:span {:class (s/sr-only)} "Toggle Navigation"]
-       [:i {:class (compose (if @button-active (s/color-on-active s/secondary)) (s/circle-bounding) "la la-bars")}]])))
+  (fn []
+    [:button {:class (compose (s/navbar-toggle navbar-height))
+              :on-click toggle-sidebar-visibility!}
+     [:span {:class (s/sr-only)} "Toggle Navigation"]
+     [:i {:class (compose (if @data/sidebar-open (s/color-on-active s/secondary)) (s/circle-bounding) "la la-bars")}]]))
 
 (defn options-toggle []
   (let [button-active (r/atom false)]
@@ -75,7 +77,7 @@
        {:class (compose
                 (s/pad-in-start 10)
                 (s/navbar-brand))
-        :on-click #(set-active! :random)} "herald"]
+        :on-click #((toggle-sidebar-visibility!) (set-active! :random))} "herald"]
       ;; options
       [options-toggle]]]))
 
