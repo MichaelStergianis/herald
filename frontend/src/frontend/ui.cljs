@@ -11,6 +11,7 @@
 (defn set-active! [k]
   (reset! data/active k))
 
+
 (defonce navbar-height 48)
 (defonce medium-bar-divisor 4)
 (defonce small-bar-divisor 24)
@@ -43,7 +44,7 @@
         clicked? (r/atom false)]
     (fn []
       [:i (r/merge-props {:class (compose (s/circle-bounding) (s/album-button 4 4) (if @clicked? (s/album-button-clicked)))
-                          :on-click (fn [] ((r/props this) :customclickevent) (reset! clicked? (not @clicked?)))}
+                          :on-click (fn [] (reset! clicked? (not @clicked?)))}
                          (r/props this))])))
 
 (defn album []
@@ -58,19 +59,18 @@
       [:div (r/merge-props {:class (s/album width-height 2)
                             :on-mouse-enter (fn [] (reset! mouse-on? true))
                             :on-mouse-leave (fn [] (reset! mouse-on? false))
-                            }
+                            :on-click (fn [] (println "album" ((r/props this) :albumid) "clicked"))}
                            (r/props this))
        [:div {:class (s/album-inside)}
         [:div {:class (s/album-background)}]
         [:i {:class (compose "la la-music" (s/album-img))}]
-        [:div {:class (compose (s/album-info))}
+        [:div {:class (compose (s/no-select) (s/album-info))}
          [:b (@artist-info :name)]
          [:br]
          (@album-info :title)]
         [:div {:class (compose (s/album-buttons) (if @mouse-on? (s/album-buttons-show)))}
          [album-button {:class (compose "la la-bookmark")}]
-         [album-button {:class (compose "la la-play")
-                        :customclickevent #(println "hello")}]]]])))
+         [album-button {:class (compose "la la-play")}]]]])))
 
 (defn albums []
   (req/get-all "albums" data/albums "title")

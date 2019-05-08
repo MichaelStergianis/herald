@@ -24,6 +24,14 @@
 (defstyles pad-in-start [padding]
   {:padding-left (str padding "px")})
 
+(defstyles no-select []
+  {:-webkit-touch-callout "none" #_(iOS Safari)
+     :-webkit-user-select "none" #_(Safari)
+      :-khtml-user-select "none" #_(Konqueror HTML)
+        :-moz-user-select "none" #_(Firefox)
+         :-ms-user-select "none" #_(Internet Explorer/Edge)
+             :user-select "none" #_(Chrome and Opera)})
+
 (defstyles navbar []
   {:position "fixed"
    :z-index "999"
