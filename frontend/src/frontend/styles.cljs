@@ -25,8 +25,10 @@
   {:padding-left (str padding "px")})
 
 (defstyles navbar []
-  {:position "absolute"
-   :top "0px"
+  {:position "fixed"
+   :z-index "999"
+   :top "0"
+   :left "0"
    :background-color primary
    :color white
    :display "table"
@@ -57,12 +59,14 @@
    :font-size "18px"
    :color white})
 
+(defstyles toggle []
+  {:padding "4px"
+   :transition "background-color 0.1s ease-in-out"})
+
 (defstyles circle-bounding []
   {:border-radius "50%"
-   :padding "4px"
    :-webkit-shape-outside "circle()"
-   :shape-outside "circle()"
-   :transition "background-color 0.1s ease-in-out"})
+   :shape-outside "circle()"})
 
 (defstyles color-on-active [color]
   {:background-color color})
@@ -73,10 +77,10 @@
    :cursor "pointer"})
 
 (defstyles sidebar [document-height top width]
-  {:position "absolute"
+  {:position "fixed"
    :width (str width "px")
    :top (str top "px")
-   :left (str "-" width "px")
+   :left (str "-" (+ width (/ width 10)) "px")
    :height (str (- document-height top) "px")
    :background-color white
    :transition "left 0.5s"
@@ -122,3 +126,72 @@
    :position "absolute"
    :width "1px"
    :word-wrap "normal !important"})
+
+(defstyles album [wh padding]
+  {:width  (str wh "px")
+   :height (str wh "px")
+   :padding (str padding "px")
+   :display "inline-block"
+   :position "relative"
+   :margin "8px"
+   :box-shadow "2px 2px 4px 1px #c0c0c0"
+   :visibility "visible"
+   :cursor "pointer"
+   })
+
+(defstyles album-inside []
+  {})
+
+(defstyles album-info []
+  {:position "relative"
+   :float "left"
+   :z-index "3"
+   :text-align "left"
+   :color white})
+
+(defstyles album-background []
+  {:width  "100%"
+   :height "100%"
+   :position "absolute"
+   :z-index "1"
+   :top "0"
+   :left "0"
+   :background-color secondary})
+
+(defstyles album-img []
+  {:width  "100%"
+   :height "100%"
+   :margin "0"
+   :top "50%"
+   :color s-light
+   :transform "translateY(-25%)"
+   :-ms-transform "translateY(-25%)"
+   :font-size "84px"
+   :text-align "center"
+   :z-index "2"
+   :position "absolute"})
+
+(defstyles album-buttons []
+  {:z-index "3"
+   :display "inline"
+   :position "absolute"
+   :bottom "0"
+   :right "0"
+   :font-size "18px"
+   :color white
+   :visibility "hidden"
+   :opacity "0"
+   :transition "visibility 0.3s, opacity .3s"})
+
+(defstyles album-buttons-show []
+  {:visibility "visible"
+   :opacity "1"})
+
+(defstyles album-button [padding margin]
+  {:padding (str padding "px")
+   :margin  (str margin "px")
+   :background-color s-light
+   :transition "color .07s ease-in-out"})
+
+(defstyles album-button-clicked []
+  {:color s-dark})
