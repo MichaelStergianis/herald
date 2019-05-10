@@ -10,6 +10,11 @@ const (
 	imageType
 )
 
+// Pathable ...
+type Pathable interface {
+	GetPath() string
+}
+
 // Queryable ...
 type Queryable interface {
 	GetID() int64
@@ -92,6 +97,11 @@ func (l *Library) SetID(ID int64) {
 	l.ID = ID
 }
 
+// GetPath ...
+func (l Library) GetPath() string {
+	return l.Path
+}
+
 // Artist ...
 // A representation of an artist.
 type Artist struct {
@@ -108,6 +118,11 @@ func (a Artist) GetID() int64 {
 // SetID ...
 func (a *Artist) SetID(ID int64) {
 	a.ID = ID
+}
+
+// GetPath ...
+func (a Artist) GetPath() string {
+	return a.Path
 }
 
 // Genre ...
@@ -150,6 +165,11 @@ func (a *Album) SetID(ID int64) {
 	a.ID = ID
 }
 
+// GetPath ...
+func (a Album) GetPath() string {
+	return a.Path
+}
+
 // Song ...
 // Song representation.
 type Song struct {
@@ -177,6 +197,11 @@ func (s *Song) SetID(ID int64) {
 	s.ID = ID
 }
 
+// GetPath ...
+func (s Song) GetPath() string {
+	return s.Path
+}
+
 // SongInLibrary ...
 type SongInLibrary struct {
 	SongID    int64 `edn:"song-id" json:"lib-id" sql:"song_id"`
@@ -197,6 +222,11 @@ func (i Image) GetID() int64 {
 // SetID ...
 func (i *Image) SetID(ID int64) {
 	i.ID = ID
+}
+
+// GetPath ...
+func (i Image) GetPath() string {
+	return i.Path
 }
 
 // ImageInAlbum ...
