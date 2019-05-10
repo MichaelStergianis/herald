@@ -42,10 +42,10 @@ func Open(connStr string) (*HeraldDB, error) {
 		return nil, err
 	}
 
-	hdb := HeraldDB{
+	hdb := &HeraldDB{
 		sqldb,
 	}
-	return &hdb, nil
+	return hdb, nil
 }
 
 // duration ...
@@ -353,6 +353,8 @@ func (hdb *HeraldDB) songInLibrary(song Song, library Library) (inLib bool, err 
 
 	return inLib, nil
 }
+
+// TODO GetTypeInLibrary ...
 
 // GetSongsInLibrary ...
 func (hdb *HeraldDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
