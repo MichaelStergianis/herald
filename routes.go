@@ -26,7 +26,6 @@ type encFunc func(interface{}) ([]byte, error)
 
 type record struct {
 	url   string
-	table string
 	query heraldDB.Queryable
 }
 
@@ -59,12 +58,12 @@ func (serv *server) addRoutes() *server {
 	}
 
 	records := []record{
-		{"/library", "music.libraries", &heraldDB.Library{}},
-		{"/artist", "music.artists", &heraldDB.Artist{}},
-		{"/album", "music.albums", &heraldDB.Album{}},
-		{"/genre", "music.genres", &heraldDB.Genre{}},
-		{"/song", "music.songs", &heraldDB.Song{}},
-		{"/image", "music.images", &heraldDB.Image{}},
+		{"/library", &heraldDB.Library{}},
+		{"/artist", &heraldDB.Artist{}},
+		{"/album", &heraldDB.Album{}},
+		{"/genre", &heraldDB.Genre{}},
+		{"/song", &heraldDB.Song{}},
+		{"/image", &heraldDB.Image{}},
 	}
 
 	for _, enc := range encoders {
@@ -72,12 +71,12 @@ func (serv *server) addRoutes() *server {
 		for _, rec := range records {
 			// add the record type to the subrouter
 			subrouter.
-				HandleFunc(rec.url+"/{id}", serv.NewUniqueQueryHandler(rec.table, enc, rec.query)).
+				HandleFunc(rec.url+"/{id}", serv.NewUniqueQueryHandler(enc, rec.query)).
 				Methods("GET")
 
 			// non unique
 			subrouter.
-				HandleFunc(rec.url+"s/", serv.NewQueryHandler(rec.table, enc, rec.query)).
+				HandleFunc(rec.url+"s/", serv.NewQueryHandler(enc, rec.query)).
 				Methods("GET")
 		}
 	}
@@ -87,7 +86,7 @@ func (serv *server) addRoutes() *server {
 
 // NewUniqueQueryHandler ...
 // Expects a database object, a table name, and a type to use.
-func (serv *server) NewUniqueQueryHandler(tableName string, enc encoder, queryType heraldDB.Queryable) http.HandlerFunc {
+func (serv *server) NewUniqueQueryHandler(enc encoder, queryType heraldDB.Queryable) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := heraldDB.NewFromQueryable(queryType)
 
@@ -102,7 +101,7 @@ func (serv *server) NewUniqueQueryHandler(tableName string, enc encoder, queryTy
 		}
 
 		query.SetID(int64(id))
-		err = serv.hdb.GetUniqueItem(tableName, query)
+		err = serv.hdb.GetUniqueItem(query)
 		if err != nil {
 			badRequestErr(w, err)
 			return
@@ -125,7 +124,7 @@ func (serv *server) NewUniqueQueryHandler(tableName string, enc encoder, queryTy
 //
 // data    - Format corresponding to the encoder.
 // orderby - Specifies the field by which to order the data, and is optional.
-func (serv *server) NewQueryHandler(tableName string, enc encoder, queryType interface{}) http.HandlerFunc {
+func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.HandlerFunc {
 	const orderField = "orderby"
 	validFields, err := heraldDB.ValidFields(enc.name, queryType)
 	if err != nil {
@@ -155,7 +154,7 @@ func (serv *server) NewQueryHandler(tableName string, enc encoder, queryType int
 				return
 			}
 
-			result, err := serv.hdb.GetItem(tableName, query, converter, orderBy)
+			result, err := serv.hdb.GetItem(query, converter, orderBy)
 			if err != nil {
 				badRequestErr(w, err)
 				return
