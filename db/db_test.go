@@ -531,17 +531,17 @@ func TestScanLibrary(t *testing.T) {
 func TestGetUniqueItem(t *testing.T) {
 	prepareDB()
 
+	query := &Artist{
+		ID: 1,
+	}
+
 	verify := Artist{
 		ID:   1,
 		Name: "BADBADNOTGOOD",
 		Path: "/home/test/Music/BADBADNOTGOOD",
 	}
 
-	query := &Artist{
-		ID: 1,
-	}
-
-	err := hdb.GetUniqueItem("music.artists", query)
+	err := hdb.GetUniqueItem(query)
 	if err != nil {
 		t.Error(err)
 	}
@@ -557,13 +557,12 @@ func TestGetItem(t *testing.T) {
 	prepareDB()
 
 	testCases := [...]struct {
-		table   string
 		query   interface{}
 		encName string
 		orderby []string
 		answer  []interface{}
 	}{
-		{"music.songs", Song{Artist: "BADBADNOTGOOD"}, "edn", []string{},
+		{Song{Artist: "BADBADNOTGOOD"}, "edn", []string{},
 			[]interface{}{
 				Song{ID: 1, Album: 1, Genre: 1,
 					Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
@@ -578,7 +577,7 @@ func TestGetItem(t *testing.T) {
 					Size: 204299, Duration: 1999,
 					Artist: "BADBADNOTGOOD"}}},
 		// order by single element
-		{"music.albums", Album{Artist: 1}, "json", []string{"num-tracks"},
+		{Album{Artist: 1}, "json", []string{"num-tracks"},
 			[]interface{}{
 				Album{ID: 5, Artist: 1, Year: 2012,
 					NumTracks: 19, NumDisks: 1, Duration: 1688,
@@ -590,7 +589,7 @@ func TestGetItem(t *testing.T) {
 		},
 
 		// order by multiple elemnts
-		{"music.albums", Album{NumDisks: 1}, "edn", []string{"duration", "num-tracks"},
+		{Album{NumDisks: 1}, "edn", []string{"duration", "num-tracks"},
 			[]interface{}{
 				Album{ID: 5, Artist: 1, Year: 2012,
 					NumTracks: 19, NumDisks: 1, Duration: 1688,
@@ -608,7 +607,7 @@ func TestGetItem(t *testing.T) {
 					NumTracks: 8, NumDisks: 1, Duration: 15440,
 					Title: "Killers", Path: "/home/tests/MyMusic/Iron Maiden/Killers"},
 			}},
-		{"music.albums", Album{NumDisks: 1}, "edn", []string{"duration", "year"},
+		{Album{NumDisks: 1}, "edn", []string{"duration", "year"},
 			[]interface{}{
 				Album{ID: 1, Artist: 1, Year: 2011,
 					NumTracks: 20, NumDisks: 1, Duration: 1688,
@@ -628,9 +627,9 @@ func TestGetItem(t *testing.T) {
 			}},
 	}
 
-	for _, test := range testCases {
+	for testCase, test := range testCases {
 		converter := NewTagConverter(test.query, test.encName, "sql")
-		results, err := hdb.GetItem(test.table, test.query, converter, test.orderby)
+		results, err := hdb.GetItem(test.query, converter, test.orderby)
 
 		if err != nil {
 			t.Error(err)
@@ -639,7 +638,7 @@ func TestGetItem(t *testing.T) {
 		for i := range results {
 			if test.answer[i] != results[i] {
 				t.Error(fmt.Errorf("test case %d failed\n\t%9s %+v\n\t%-9s %+v",
-					i, "expected:", test.answer[i], "result:", results[i]))
+					testCase, "expected:", test.answer[i], "result:", results[i]))
 			}
 		}
 	}

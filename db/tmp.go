@@ -6,43 +6,6 @@ import (
 	"strings"
 )
 
-// GetQueryable ...
-// Get a valid queryable table and a zero value back.
-func GetQueryable(table string) (Queryable, bool) {
-
-	var validTables = map[string]Queryable{
-		"music.artists":   &Artist{},
-		"music.genres":    &Genre{},
-		"music.images":    &Image{},
-		"music.albums":    &Album{},
-		"music.songs":     &Song{},
-		"music.libraries": &Library{},
-	}
-
-	q, ok := validTables[table]
-	return q, ok
-}
-
-// GetUniqueItem ...
-// Returns a unique item from the database. Requires an id.
-func (hdb *HeraldDB) GetUniqueItem(table string, query Queryable) (err error) {
-	if _, ok := GetQueryable(table); !ok {
-		return ErrInvalidTable
-	}
-	rquery := reflect.ValueOf(query)
-
-	q, a := prepareUniqueQuery(table, rquery)
-
-	destArr := prepareDest(&rquery)
-
-	err = hdb.QueryRow(q, a...).Scan(destArr...)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // NewFromQueryable ...
 func NewFromQueryable(q Queryable) Queryable {
 	t := reflect.TypeOf(q)
@@ -59,89 +22,6 @@ func NewFromInterface(i interface{}) interface{} {
 		t = t.Elem()
 	}
 	return reflect.New(t).Interface()
-}
-
-// prepareQuery ...
-func prepareQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
-	rqueryT := rquery.Type()
-
-	selections := make([]string, rquery.NumField())
-	wheres := make([]string, rquery.NumField())
-	args = make([]interface{}, rquery.NumField())
-
-	for i := 0; i < rquery.NumField(); i++ {
-		f := rqueryT.Field(i)
-		if tag, ok := f.Tag.Lookup("sql"); ok {
-			selections[i] = tag
-			wheres[i] = fmt.Sprintf("%s = $%d", tag, i+1)
-			args[i] = rquery.Field(i).Interface()
-		}
-	}
-
-	query = "SELECT " + strings.Join(selections, ", ") + " " +
-		"FROM " + table + " " +
-		"WHERE " + "(" + strings.Join(wheres, " AND ") + ");"
-
-	return query, args
-}
-
-// prepareDest ...
-func prepareDest(rdest *reflect.Value) (destArr []interface{}) {
-	rdestVal := *rdest
-	if rdestVal.Kind() == reflect.Ptr {
-		rdestVal = rdestVal.Elem()
-	}
-	destArr = make([]interface{}, rdestVal.NumField())
-	for i := 0; i < rdestVal.NumField(); i++ {
-		if rdestVal.Field(i).CanInterface() {
-			destArr[i] = rdestVal.Field(i).Addr().Interface()
-		}
-	}
-	return destArr
-}
-
-// prepareUniqueQuery ...
-func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
-	if rquery.Kind() == reflect.Ptr {
-		rquery = rquery.Elem()
-	}
-	rqueryT := rquery.Type()
-
-	selections := make([]string, rquery.NumField())
-	args = make([]interface{}, 1)
-	args[0] = rquery.FieldByName("ID").Interface()
-
-	for i := 0; i < rquery.NumField(); i++ {
-		f := rqueryT.Field(i)
-		if tag, ok := f.Tag.Lookup("sql"); ok {
-			selections[i] = tag
-		}
-	}
-
-	query = "SELECT " + strings.Join(selections, ", ") + " " +
-		"FROM " + table + " " +
-		"WHERE " + "(" + fmt.Sprintf("%s = $%d", "id", 1) + ");"
-
-	return query, args
-}
-
-// IsZero ...
-func IsZero(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Array, reflect.String:
-		return v.Len() == 0
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
-		return v.IsNil()
-	}
-	return false
 }
 
 // NewTagConverter ...
@@ -167,27 +47,82 @@ func NewTagConverter(queryType interface{}, from, to string) (converter map[stri
 	return converter
 }
 
-// GetItem ...
-// GetItem searches the database for an item matching the query type,
-// using the queries fields.
-//
-// Order by is optional, if you pass an empty array it will be ignored. Otherwise it will pass the column names to
-func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, converter map[string]string, orderBy []string) ([]interface{}, error) {
-	if !GetValidTable(tableName) {
-		return nil, ErrInvalidTable
+// IsZero ...
+func IsZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
+}
+
+// GetTableFromType ...
+func GetTableFromType(q interface{}) (string, bool) {
+	var validTypes = map[reflect.Type]string{
+		reflect.TypeOf(&Library{}): "music.libraries",
+		reflect.TypeOf(&Artist{}):  "music.artists",
+		reflect.TypeOf(&Genre{}):   "music.genres",
+		reflect.TypeOf(&Image{}):   "music.images",
+		reflect.TypeOf(&Album{}):   "music.albums",
+		reflect.TypeOf(&Song{}):    "music.songs",
+
+		reflect.TypeOf(&SongInLibrary{}): "music.songs_in_library",
+		reflect.TypeOf(&ImageInAlbum{}):  "music.images_in_album",
 	}
 
-	rQuery := reflect.ValueOf(queryType)
-	if rQuery.Kind() == reflect.Ptr {
-		rQuery = rQuery.Elem()
+	qV := NewFromInterface(q)
+	s, ok := validTypes[reflect.TypeOf(qV)]
+	return s, ok
+}
+
+// GetQueryableFromTable ...
+// Get a valid queryable table and a zero value back.
+func GetQueryableFromTable(table string) (Queryable, bool) {
+	var validTables = map[string]Queryable{
+		"music.artists":   &Artist{},
+		"music.genres":    &Genre{},
+		"music.images":    &Image{},
+		"music.albums":    &Album{},
+		"music.songs":     &Song{},
+		"music.libraries": &Library{},
 	}
+
+	q, ok := validTables[table]
+	return q, ok
+}
+
+// prepareDest ...
+func prepareDest(rdest reflect.Value) (destArr []interface{}) {
+	if rdest.Kind() == reflect.Ptr {
+		rdest = rdest.Elem()
+	}
+	destArr = make([]interface{}, 0)
+	for i := 0; i < rdest.NumField(); i++ {
+		if rdest.Field(i).CanInterface() {
+			destArr = append(destArr, rdest.Field(i).Addr().Interface())
+		}
+	}
+	return destArr
+}
+
+// prepareQuery ...
+func prepareQuery(table string, rQuery reflect.Value,
+	converter map[string]string, orderBy []string) (query string, vals []interface{}, err error) {
+
 	rType := rQuery.Type()
-
-	var (
-		vals = make([]interface{}, 0)
-	)
+	vals = make([]interface{}, 0)
 	selectQ := "SELECT "
-	fromQ := "FROM " + tableName + " "
+	fromQ := "FROM " + table + " "
 	whereQuery := "WHERE "
 
 	idx := 1
@@ -215,22 +150,91 @@ func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, converter 
 		whereQuery = ""
 	}
 
-	query := selectQ + fromQ + whereQuery
+	orderQuery := ""
 	if len(orderBy) > 0 {
-		orderQuery := "ORDER BY "
+		orderQuery += "ORDER BY "
 		for i, encTag := range orderBy {
 			sqlTag, ok := converter[encTag]
 			if !ok {
-				return []interface{}{}, ErrInvalidTag
+				return "", []interface{}{}, ErrInvalidTag
 			}
 			orderQuery += sqlTag
 			if i < len(orderBy)-1 {
 				orderQuery += ", "
 			}
 		}
-		query += orderQuery
 	}
-	query += ";"
+	query = selectQ + fromQ + whereQuery + orderQuery + ";"
+	return query, vals, nil
+}
+
+// prepareUniqueQuery ...
+func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args []interface{}) {
+	if rquery.Kind() == reflect.Ptr {
+		rquery = rquery.Elem()
+	}
+	rqueryT := rquery.Type()
+
+	selections := make([]string, rquery.NumField())
+	args = make([]interface{}, 1)
+	args[0] = rquery.FieldByName("ID").Interface()
+
+	for i := 0; i < rquery.NumField(); i++ {
+		f := rqueryT.Field(i)
+		if tag, ok := f.Tag.Lookup("sql"); ok {
+			selections[i] = tag
+		}
+	}
+
+	query = "SELECT " + strings.Join(selections, ", ") + " " +
+		"FROM " + table + " " +
+		"WHERE (id = $1);"
+
+	return query, args
+}
+
+// GetUniqueItem ...
+// Returns a unique item from the database. Requires an id.
+func (hdb *HeraldDB) GetUniqueItem(query Queryable) (err error) {
+	table, ok := GetTableFromType(query)
+
+	if !ok {
+		return ErrInvalidTable
+	}
+	rquery := reflect.ValueOf(query)
+
+	q, a := prepareUniqueQuery(table, rquery)
+
+	destArr := prepareDest(rquery)
+
+	err = hdb.QueryRow(q, a...).Scan(destArr...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetItem ...
+// GetItem searches the database for an item matching the query type,
+// using the queries fields.
+//
+// Order by is optional, if you pass an empty array it will be ignored. Otherwise it will pass the column names to
+func (hdb *HeraldDB) GetItem(queryType interface{},
+	converter map[string]string, orderBy []string) ([]interface{}, error) {
+
+	table, ok := GetTableFromType(queryType)
+	if !ok {
+		return nil, ErrInvalidTable
+	}
+
+	rQuery := reflect.ValueOf(queryType)
+	if rQuery.Kind() == reflect.Ptr {
+		rQuery = rQuery.Elem()
+	}
+	rType := rQuery.Type()
+
+	query, vals, err := prepareQuery(table, rQuery, converter, orderBy)
 
 	rows, err := hdb.Query(query, vals...)
 	if err != nil {
@@ -242,7 +246,7 @@ func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, converter 
 		r := reflect.New(rType)
 		r = r.Elem()
 
-		destArr := prepareDest(&r)
+		destArr := prepareDest(r)
 
 		rows.Scan(destArr...)
 
@@ -250,4 +254,8 @@ func (hdb *HeraldDB) GetItem(tableName string, queryType interface{}, converter 
 	}
 
 	return results, nil
+}
+
+// AddItem ...
+func addItem(table string, queryType interface{}) {
 }
