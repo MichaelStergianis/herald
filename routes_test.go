@@ -51,12 +51,12 @@ func TestNewUniqueQueryHandler(t *testing.T) {
 		{"edn", edn.Marshal, edn.Unmarshal},
 	}
 	records := [...]record{
-		{"library", "music.libraries", &heraldDB.Library{ID: 1}},
-		{"genre", "music.genres", &heraldDB.Genre{ID: 1}},
-		{"artist", "music.artists", &heraldDB.Artist{ID: 1}},
-		{"album", "music.albums", &heraldDB.Album{ID: 1}},
-		{"song", "music.songs", &heraldDB.Song{ID: 1}},
-		{"image", "music.images", &heraldDB.Image{ID: 1}},
+		{"library", &heraldDB.Library{ID: 1}},
+		{"genre", &heraldDB.Genre{ID: 1}},
+		{"artist", &heraldDB.Artist{ID: 1}},
+		{"album", &heraldDB.Album{ID: 1}},
+		{"song", &heraldDB.Song{ID: 1}},
+		{"image", &heraldDB.Image{ID: 1}},
 	}
 
 	answers := [...]heraldDB.Queryable{
