@@ -76,5 +76,3 @@ CREATE TABLE IF NOT EXISTS music.songs_in_library (
        library_id INTEGER REFERENCES music.libraries(id),
        PRIMARY KEY (song_id, library_id)
 );
-
-

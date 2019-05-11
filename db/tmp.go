@@ -256,6 +256,78 @@ func (hdb *HeraldDB) GetItem(queryType interface{},
 	return results, nil
 }
 
-// AddItem ...
-func addItem(table string, queryType interface{}) {
+// addItem ...
+// Adds an item to the database. Returning may be the empty string, in
+// which case it will return nothing. Otherwise it must be a valid
+// interfaceable field for the query type and it will be placed into
+// that query and returned.
+func (hdb *HeraldDB) addItem(query interface{}, returning []string) (interface{}, error) {
+	var err error
+
+	// make a map of sql tags to sql tags to make lookup easy
+	returnTags := make(map[string]struct{}, 0)
+	for _, ret := range returning {
+		returnTags[ret] = struct{}{}
+	}
+
+	// lookup corresponding table
+	table, ok := GetTableFromType(query)
+	if !ok {
+		return nil, ErrInvalidTable
+	}
+
+	rQuery := reflect.ValueOf(query)
+	if rQuery.Kind() == reflect.Ptr {
+		rQuery = rQuery.Elem()
+	}
+	rType := rQuery.Type()
+
+	insertVals := make([]interface{}, 0)
+	returnVal := make([]interface{}, 0)
+	insertQ := "INSERT INTO " + table + " ("
+	valueQ := "VALUES ("
+
+	var returningQ string
+	if len(returning) > 0 {
+		returningQ += " RETURNING "
+	}
+
+	valNum := 1
+	for i := 0; i < rQuery.NumField(); i++ {
+		f := rQuery.Field(i)
+		if _, ok := returnTags[rType.Field(i).Tag.Get("sql")]; ok {
+			returnVal = append(returnVal, f.Addr().Interface())
+			returningQ += rType.Field(i).Tag.Get("sql")
+			if len(returnVal) < len(returning) {
+				returningQ += ", "
+			}
+		}
+		if !IsZero(f) && f.CanInterface() {
+			// insert the field name
+			insertQ += rType.Field(i).Tag.Get("sql")
+			valueQ += fmt.Sprintf("$%d", valNum)
+			valNum++
+			if i < rQuery.NumField()-1 {
+				insertQ += ", "
+				valueQ += ", "
+			}
+			insertVals = append(insertVals, f.Interface())
+		}
+	}
+	insertQ += ") "
+	valueQ += ")"
+
+	q := insertQ + valueQ + returningQ
+	row := hdb.QueryRow(q, insertVals...)
+
+	if len(returnVal) > 0 {
+		err = row.Scan(returnVal...)
+	} else {
+		err = row.Scan()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return query, nil
 }
