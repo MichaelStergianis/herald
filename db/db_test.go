@@ -629,7 +629,11 @@ func TestGetItem(t *testing.T) {
 
 	for testCase, test := range testCases {
 		converter := NewTagConverter(test.query, test.encName, "sql")
-		results, err := hdb.GetItem(test.query, converter, test.orderby)
+		convTags, err := ConvertTags(test.orderby, converter)
+		if err != nil {
+			t.Errorf("error in tag conversion, test case: %d: %v\n", testCase, err)
+		}
+		results, err := hdb.GetItem(test.query, convTags)
 
 		if err != nil {
 			t.Error(err)

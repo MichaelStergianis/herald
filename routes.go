@@ -154,7 +154,13 @@ func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.Han
 				return
 			}
 
-			result, err := serv.hdb.GetItem(query, converter, orderBy)
+			convTags, err := heraldDB.ConvertTags(orderBy, converter)
+			if err != nil {
+				badRequestErr(w, err)
+				return
+			}
+
+			result, err := serv.hdb.GetItem(query, convTags)
 			if err != nil {
 				badRequestErr(w, err)
 				return

@@ -24,6 +24,19 @@ func NewFromInterface(i interface{}) interface{} {
 	return reflect.New(t).Interface()
 }
 
+// ConvertTags ...
+func ConvertTags(tags []string, converter map[string]string) (convertedTags []string, err error) {
+	convertedTags = make([]string, len(tags))
+	for i, tag := range tags {
+		convT, ok := converter[tag]
+		if !ok {
+			return nil, ErrInvalidTag
+		}
+		convertedTags[i] = convT
+	}
+	return convertedTags, nil
+}
+
 // NewTagConverter ...
 func NewTagConverter(queryType interface{}, from, to string) (converter map[string]string) {
 	converter = map[string]string{}
@@ -116,8 +129,7 @@ func prepareDest(rdest reflect.Value) (destArr []interface{}) {
 }
 
 // prepareQuery ...
-func prepareQuery(table string, rQuery reflect.Value,
-	converter map[string]string, orderBy []string) (query string, vals []interface{}, err error) {
+func prepareQuery(table string, rQuery reflect.Value, orderBy []string) (query string, vals []interface{}, err error) {
 
 	rType := rQuery.Type()
 	vals = make([]interface{}, 0)
@@ -153,12 +165,8 @@ func prepareQuery(table string, rQuery reflect.Value,
 	orderQuery := ""
 	if len(orderBy) > 0 {
 		orderQuery += "ORDER BY "
-		for i, encTag := range orderBy {
-			sqlTag, ok := converter[encTag]
-			if !ok {
-				return "", []interface{}{}, ErrInvalidTag
-			}
-			orderQuery += sqlTag
+		for i, tag := range orderBy {
+			orderQuery += tag
 			if i < len(orderBy)-1 {
 				orderQuery += ", "
 			}
@@ -219,9 +227,11 @@ func (hdb *HeraldDB) GetUniqueItem(query Queryable) (err error) {
 // GetItem searches the database for an item matching the query type,
 // using the queries fields.
 //
-// Order by is optional, if you pass an empty array it will be ignored. Otherwise it will pass the column names to
-func (hdb *HeraldDB) GetItem(queryType interface{},
-	converter map[string]string, orderBy []string) ([]interface{}, error) {
+// Order by is optional. You must provide the sql names, you can use
+// the provided tag conversion functions to convert from json or
+// edn. If you pass an empty array it will be ignored. Otherwise it
+// will pass the column names to the sql service.
+func (hdb *HeraldDB) GetItem(queryType interface{}, orderBy []string) ([]interface{}, error) {
 
 	table, ok := GetTableFromType(queryType)
 	if !ok {
@@ -234,7 +244,7 @@ func (hdb *HeraldDB) GetItem(queryType interface{},
 	}
 	rType := rQuery.Type()
 
-	query, vals, err := prepareQuery(table, rQuery, converter, orderBy)
+	query, vals, err := prepareQuery(table, rQuery, orderBy)
 
 	rows, err := hdb.Query(query, vals...)
 	if err != nil {
