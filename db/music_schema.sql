@@ -36,11 +36,11 @@ CREATE TABLE IF NOT EXISTS music.albums (
 
        artist INTEGER REFERENCES music.artists(id),
 
-       release_year INTEGER,
-       num_tracks INTEGER NOT NULL, -- number of songs
-       num_disks INTEGER NOT NULL,  -- number of disks
        title VARCHAR NOT NULL,
        fs_path VARCHAR UNIQUE NOT NULL,
+       release_year INTEGER,
+       num_tracks INTEGER, -- number of songs
+       num_disks INTEGER,  -- number of disks
        duration DOUBLE PRECISION -- seconds
 );
 
@@ -55,17 +55,21 @@ CREATE TABLE IF NOT EXISTS music.images_in_album (
 CREATE TABLE IF NOT EXISTS music.songs (
        id SERIAL PRIMARY KEY,
 
+       -- foreign keys
        album INTEGER REFERENCES music.albums(id),
        genre INTEGER REFERENCES music.genres(id),
 
+       -- not null
        fs_path VARCHAR UNIQUE NOT NULL,
        title VARCHAR NOT NULL,
-       track INTEGER NOT NULL,
-       num_tracks INTEGER NOT NULL,
-       disk INTEGER NOT NULL,
-       num_disks INTEGER NOT NULL,
-       song_size INTEGER NOT NULL,           -- bytes
-       duration DOUBLE PRECISION NOT NULL,   -- seconds
+       song_size BIGINT NOT NULL,         -- bytes
+       duration DOUBLE PRECISION NOT NULL, -- seconds
+
+       -- nullable
+       track INTEGER,
+       num_tracks INTEGER,
+       disk INTEGER,
+       num_disks INTEGER,
        artist VARCHAR
 );
 

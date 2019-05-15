@@ -1,12 +1,14 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -18,6 +20,8 @@ var (
 const (
 	testLibName = "Test"
 	dbName      = "herald_test"
+	testSongLoc = "Simpsons/Thermo/"
+	testSong    = "Simpsons/Thermo/01 Obey.mp3"
 )
 
 var (
@@ -181,29 +185,6 @@ func TestGetLibraries(t *testing.T) {
 	}
 }
 
-// TestGetArtists ...
-func TestGetArtists(t *testing.T) {
-	prepareDB()
-
-	expected := []Artist{
-		Artist{ID: 1, Name: "BADBADNOTGOOD", Path: "/home/test/Music/BADBADNOTGOOD"},
-		Artist{ID: 2, Name: "BADBADNOTGOOD & Ghostface Killah", Path: "/home/test/Music/BADBADNOTGOOD & Ghostface Killah"},
-		Artist{ID: 3, Name: "Iron Maiden", Path: "/home/tests/MyMusic/Iron Maiden"},
-		Artist{ID: 4, Name: "Megadeth", Path: "/home/test/Music/Megadeth"},
-	}
-
-	results, err := hdb.GetArtists()
-	if err != nil {
-		t.Error(err)
-	}
-
-	for i := 0; i < len(results); i++ {
-		if expected[i] != results[i] {
-			t.Error("expected did not match results")
-		}
-	}
-}
-
 // TestSongInLibrary ...
 func TestSongInLibrary(t *testing.T) {
 	prepareDB()
@@ -263,122 +244,15 @@ func TestSongNotInLibrary(t *testing.T) {
 	}
 }
 
-// TestGetUniqueAlbum ...
-func TestGetUniqueAlbum(t *testing.T) {
-	prepareDB()
-
-	var (
-		a   Album
-		err error
-	)
-
-	album := Album{
-		ID:        1,
-		Artist:    1,
-		Year:      2011,
-		NumTracks: 20,
-		NumDisks:  1,
-		Title:     "III",
-		Path:      "/home/test/Music/BADBADNOTGOOD/III",
-		Duration:  1688,
-	}
-
-	a, err = hdb.GetUniqueAlbum(album)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if a != album {
-		t.Error(errors.New("expected album is not in database"))
-	}
-}
-
-// TestGetUniqueAlbumNegative ...
-func TestGetUniqueAlbumNegative(t *testing.T) {
-	prepareDB()
-
-	var (
-		a   Album
-		err error
-	)
-
-	album := Album{
-		ID:        9,
-		Artist:    1,
-		Year:      2011,
-		NumTracks: 20,
-		Title:     "III",
-		Path:      "BADBADNOTGOOD & Tyler the Creator/sessions/",
-		Duration:  1688,
-	}
-
-	a, err = hdb.GetUniqueAlbum(album)
-
-	if err != ErrNotPresent && err != nil {
-		t.Error(err)
-	}
-
-	if a == album {
-		t.Error("unexpected album is in database")
-	}
-}
-
-// TestAddArtist ...
-func TestAddArtist(t *testing.T) {
-	prepareDB()
-
-	artist := Artist{
-		Name: "Clever Girl",
-		Path: path.Join(testLib, "Clever Girl/"),
-	}
-
-	a, err := hdb.addArtist(artist)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	a.ID = 0
-
-	if a != artist {
-		t.Error("unexpected value returned")
-
-	}
-}
-
-// TestAddAlbum ...
-func TestAddAlbum(t *testing.T) {
-	prepareDB()
-
-	album := Album{
-		Artist:    4,
-		Year:      2001,
-		NumTracks: 11,
-		NumDisks:  1,
-		Title:     "Counterparts",
-		Path:      "Rush/Counterparts/",
-	}
-
-	a, err := hdb.addAlbum(album)
-	if err != nil {
-		t.Error(err)
-	}
-
-	a.ID = 0
-
-	if a != album {
-		t.Error("unexpected value returned")
-	}
-}
-
 // TestDuration ...
 func TestDuration(t *testing.T) {
 	prepareDB()
 	prepareTestLibrary()
 
+	expectedDuration := 3.46
+
 	song := Song{
-		Path: path.Join(testLib, "TTNG/Animals Acoustic/05 Quetzal.mp3"),
+		Path: path.Join(testLib, testSong),
 	}
 
 	d, err := duration(song)
@@ -387,89 +261,8 @@ func TestDuration(t *testing.T) {
 		t.Error(err)
 	}
 
-	if d != 87.22 {
+	if d != expectedDuration {
 		t.Error("unexpected return value")
-	}
-}
-
-// TestAddSong ...
-func TestAddSong(t *testing.T) {
-	prepareDB()
-
-	song := Song{
-		Album:     1,
-		Genre:     1,
-		Path:      "/home/test/Music/BADBADNOTGOOD/III/02 Something.mp3",
-		Title:     "Something",
-		Track:     2,
-		NumTracks: 20,
-		Disk:      1,
-		NumDisks:  1,
-		Size:      999,
-		Duration:  998,
-		Artist:    "BADBADNOTGOOD",
-	}
-
-	s, err := hdb.addSong(song)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	songVerify, err := hdb.GetUniqueSong(s)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if s != songVerify {
-		t.Error("song was not added to library correctly")
-	}
-}
-
-// TestGetSongsInLibrary ...
-func TestGetSongsInLibrary(t *testing.T) {
-	prepareDB()
-
-	songsGroundTruth := []Song{
-		Song{ID: 1, Album: 1, Genre: 1,
-			Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
-			Title: "In the Night",
-			Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
-			Size: 204192, Duration: 1993,
-			Artist: "BADBADNOTGOOD"},
-		Song{ID: 2, Album: 2, Genre: 2,
-			Path:  "/home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul/01 Sour Soul.mp3",
-			Title: "Sour Soul",
-			Track: 1, NumTracks: 10, Disk: 1, NumDisks: 1,
-			Size: 19203, Duration: 1920,
-			Artist: "BADBADNOTGOOD & Ghostface Killah"},
-		Song{ID: 4, Album: 4, Genre: 4,
-			Path:  "/home/test/Music/Megadeth/Rust in Peace/01 Hangar 18.mp3",
-			Title: "Hangar 18",
-			Track: 1, NumTracks: 13, Disk: 1, NumDisks: 1,
-			Size: 99948, Duration: 9994,
-			Artist: "Megadeth"},
-	}
-
-	libs, err := hdb.GetLibraries()
-	if err != nil {
-		t.Error(err)
-	}
-
-	songs, err := hdb.GetSongsInLibrary(libs["Music"])
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(songs) != len(songsGroundTruth) {
-		t.Error("too many songs")
-	}
-
-	for idx, song := range songs {
-		if song != songsGroundTruth[idx] {
-			t.Error("unexpected song")
-		}
 	}
 }
 
@@ -491,8 +284,10 @@ func TestProcessMedia(t *testing.T) {
 		t.Error(err)
 	}
 
-	testSong := path.Join(testLib, "GoldLink/At What Cost/02 Same Clothes as Yesterday.m4a")
-	err = hdb.processMedia(testSong, libs[testLibName])
+	ts := path.Join(testLib, testSong)
+	fmt.Printf("%s\n", ts)
+
+	err = hdb.processMedia(ts, libs[testLibName])
 	if err != nil {
 		t.Error(err)
 	}
@@ -508,23 +303,85 @@ func TestScanLibrary(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Printf("%v\n", libs)
-
 	err = hdb.ScanLibrary(libs[testLibName])
 	if err != nil {
 		t.Error(err)
 	}
 
-	// songs, err := hdb.GetSongsInLibrary(libs[testLibName])
-	// if err != nil {
-	// 	t.Error(err)
-	// }
+	songs, err := hdb.GetSongsInLibrary(libs[testLibName])
+	if err != nil {
+		t.Error(err)
+	}
 
-	// fmt.Printf("%v\n", songs)
+	fmt.Printf("%v\n", songs)
 
-	// for _, song := range songs {
-	// 	fmt.Printf("%+v\n", song)
-	// }
+	for _, song := range songs {
+		fmt.Printf("%+v\n", song)
+	}
+}
+
+// TestQuerySelection ...
+func TestQuerySelection(t *testing.T) {
+	testCases := []struct {
+		rQuery     reflect.Value
+		query      string
+		values     []interface{}
+		nullValues []sql.Scanner
+		err        error
+	}{
+		{reflect.ValueOf(&Artist{}), "SELECT id, name, fs_path",
+			[]interface{}{
+				new(int64),
+				new(string),
+				new(string),
+			},
+			[]sql.Scanner{
+				&sql.NullInt64{},
+				&sql.NullString{},
+				&sql.NullString{},
+			}, nil},
+
+		// give a non pointer, get an error
+		{reflect.ValueOf(Genre{}), "", nil, nil, ErrCannotAddr},
+	}
+
+	for testCase, test := range testCases {
+		q, v, nV, err := querySelection(test.rQuery)
+		// query string check
+		if q != test.query {
+			t.Errorf("returned query did not match expected during test case: %d\n"+
+				"\t\texpected: %v\n"+
+				"\t\tresult:   %v\n", testCase, q, test.query)
+		}
+
+		// values check
+		for i := 0; i < len(v); i++ {
+			result := reflect.ValueOf(v[i])
+			expected := reflect.ValueOf(test.values[i])
+			if result.Elem().Interface() != expected.Elem().Interface() {
+				t.Errorf("returned value did not match expected during test case %d\n"+
+					"\t\texpected: %v\n"+
+					"\t\tresult:   %v\n", testCase, expected.Elem(), result.Elem())
+			}
+		}
+
+		// null values check
+		for i := 0; i < len(v); i++ {
+			result := reflect.ValueOf(nV[i])
+			expected := reflect.ValueOf(test.nullValues[i])
+			if result.Elem().Interface() != expected.Elem().Interface() {
+				t.Errorf("returned value did not match expected during test case: %d\n"+
+					"\t\texpected: %v\n"+
+					"\t\tresult:   %v\n", testCase, expected.Elem(), result.Elem())
+			}
+		}
+
+		// error check
+		if err != test.err {
+			t.Error(err)
+		}
+
+	}
 }
 
 // TestGetUniqueItem ...
@@ -644,6 +501,56 @@ func TestGetItem(t *testing.T) {
 				t.Error(fmt.Errorf("test case %d failed\n\t%9s %+v\n\t%-9s %+v",
 					testCase, "expected:", test.answer[i], "result:", results[i]))
 			}
+		}
+	}
+}
+
+// TestAddItem ...
+func TestAddItem(t *testing.T) {
+	testCases := [...]struct {
+		query     interface{}
+		returning []string
+		answer    interface{}
+		expErr    error
+	}{
+		// no genre
+		{
+			&Song{
+				Album: 1, Path: "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
+				Title: "Sax Stuff", Track: 3, NumTracks: 20, Disk: 1, NumDisks: 1, Size: 21134,
+				Duration: 168, Artist: "BADBADNOTGOOD & LeLand WILLY"},
+			[]string{"id"},
+			&Song{ID: 10001, Album: 1, Genre: 0,
+				Path:  "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
+				Title: "Sax Stuff", Track: 3, NumTracks: 20, Disk: 1, NumDisks: 1,
+				Size: 21134, Duration: 168, Artist: "BADBADNOTGOOD & LeLand WILLY"},
+			nil,
+		},
+		// add a genre, then use it
+		{
+			&Genre{Name: "Jazz Hop"}, []string{"id"}, &Genre{10001, "Jazz Hop"}, nil,
+		},
+
+		{
+			&Song{},
+			[]string{"id"},
+			&Song{},
+			ErrNonUnique{},
+		},
+	}
+
+	for testCase, test := range testCases {
+		q, err := hdb.addItem(test.query, test.returning)
+
+		if err != test.expErr {
+			t.Errorf("test case %d failed: %v\n", testCase, err)
+		}
+
+		// reflection is the only way to compare these as they are pointers
+		rQ := reflect.ValueOf(test.query)
+		rA := reflect.ValueOf(test.answer)
+		if rQ.Elem().Interface() != rA.Elem().Interface() {
+			t.Errorf("test case %d failed:\n\texpected: %v\n\tresult:   %v\n", testCase, test.answer, q)
 		}
 	}
 }

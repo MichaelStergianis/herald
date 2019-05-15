@@ -1,9 +1,13 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
+
+	"github.com/lib/pq"
 )
 
 // NewFromQueryable ...
@@ -80,7 +84,7 @@ func IsZero(v reflect.Value) bool {
 }
 
 // GetTableFromType ...
-func GetTableFromType(q interface{}) (string, bool) {
+func GetTableFromType(q interface{}) (table string, ok bool) {
 	var validTypes = map[reflect.Type]string{
 		reflect.TypeOf(&Library{}): "music.libraries",
 		reflect.TypeOf(&Artist{}):  "music.artists",
@@ -94,24 +98,8 @@ func GetTableFromType(q interface{}) (string, bool) {
 	}
 
 	qV := NewFromInterface(q)
-	s, ok := validTypes[reflect.TypeOf(qV)]
-	return s, ok
-}
-
-// GetQueryableFromTable ...
-// Get a valid queryable table and a zero value back.
-func GetQueryableFromTable(table string) (Queryable, bool) {
-	var validTables = map[string]Queryable{
-		"music.artists":   &Artist{},
-		"music.genres":    &Genre{},
-		"music.images":    &Image{},
-		"music.albums":    &Album{},
-		"music.songs":     &Song{},
-		"music.libraries": &Library{},
-	}
-
-	q, ok := validTables[table]
-	return q, ok
+	table, ok = validTypes[reflect.TypeOf(qV)]
+	return table, ok
 }
 
 // prepareDest ...
@@ -128,6 +116,60 @@ func prepareDest(rdest reflect.Value) (destArr []interface{}) {
 	return destArr
 }
 
+// ValueToScanner ...
+func ValueToScanner(val interface{}) (sql.Scanner, error) {
+	switch val.(type) {
+	case int, int8, int16, int32, int64:
+		return &sql.NullInt64{}, nil
+	case float32, float64:
+		return &sql.NullFloat64{}, nil
+	case string:
+		return &sql.NullString{}, nil
+	case bool:
+		return &sql.NullBool{}, nil
+	case time.Time:
+		return &pq.NullTime{}, nil
+	}
+
+	return nil, ErrInvalidScanner
+}
+
+// querySelection ...
+func querySelection(rQuery reflect.Value) (query string, values []interface{}, nullValues []sql.Scanner, err error) {
+	if rQuery.Kind() == reflect.Ptr {
+		rQuery = rQuery.Elem()
+	}
+	rType := rQuery.Type()
+
+	query = "SELECT "
+	values = make([]interface{}, 0)
+	nullValues = make([]sql.Scanner, 0)
+
+	for i := 0; i < rQuery.NumField(); i++ {
+		f := rQuery.Field(i)
+		if tag, ok := rType.Field(i).Tag.Lookup("sql"); ok {
+			if len(values) > 0 {
+				query += ", "
+			}
+			query += tag
+
+			// add values to the respective slices
+			if !f.CanAddr() {
+				return "", nil, nil, ErrCannotAddr
+			}
+			values = append(values, f.Addr().Interface())
+			s, err := ValueToScanner(f.Interface())
+			if err != nil {
+				return "", nil, nil, err
+			}
+			nullValues = append(nullValues, s)
+		}
+
+	}
+
+	return query, values, nullValues, nil
+}
+
 // prepareQuery ...
 func prepareQuery(table string, rQuery reflect.Value, orderBy []string) (query string, vals []interface{}, err error) {
 
@@ -135,8 +177,9 @@ func prepareQuery(table string, rQuery reflect.Value, orderBy []string) (query s
 	vals = make([]interface{}, 0)
 	selectQ := "SELECT "
 	fromQ := "FROM " + table + " "
-	whereQuery := "WHERE "
+	whereQ := "WHERE "
 
+	// selection
 	idx := 1
 	for i := 0; i < rQuery.NumField(); i++ {
 		f := rQuery.Field(i)
@@ -148,18 +191,20 @@ func prepareQuery(table string, rQuery reflect.Value, orderBy []string) (query s
 			}
 
 			// if corresponding value is a non zero value, use it as
-			// part of the query
+			// part of the "where query"
 			if !IsZero(f) {
-				whereQuery += tag + " = " + fmt.Sprintf("$%d", idx) + " "
 				vals = append(vals, f.Interface())
+				if idx > 1 {
+					whereQ += "AND "
+				}
+				whereQ += tag + " = " + fmt.Sprintf("$%d", idx) + " "
 				idx++
 			}
 		}
 	}
-
 	if len(vals) < 1 {
 		// no where clause necessary if no data provided
-		whereQuery = ""
+		whereQ = ""
 	}
 
 	orderQuery := ""
@@ -172,7 +217,7 @@ func prepareQuery(table string, rQuery reflect.Value, orderBy []string) (query s
 			}
 		}
 	}
-	query = selectQ + fromQ + whereQuery + orderQuery + ";"
+	query = selectQ + fromQ + whereQ + orderQuery + ";"
 	return query, vals, nil
 }
 
@@ -215,6 +260,9 @@ func (hdb *HeraldDB) GetUniqueItem(query Queryable) (err error) {
 
 	destArr := prepareDest(rquery)
 
+	// current issue is that a song has no genre, and we are trying to
+	// write <nil> into an int64 space
+	// https://stackoverflow.com/questions/28642838/how-do-i-handle-nil-return-values-from-database
 	err = hdb.QueryRow(q, a...).Scan(destArr...)
 	if err != nil {
 		return err
@@ -274,6 +322,20 @@ func (hdb *HeraldDB) GetItem(queryType interface{}, orderBy []string) ([]interfa
 func (hdb *HeraldDB) addItem(query interface{}, returning []string) (interface{}, error) {
 	var err error
 
+	// check for existence
+	results, err := hdb.GetItem(query, []string{})
+	if err != nil {
+		return nil, err
+	}
+	// got more than one result, non unique information provided
+	if len(results) > 1 {
+		return nil, ErrNonUnique{query}
+	}
+	// got exactly one, probable match, return
+	if len(results) == 1 {
+		return results[0], nil
+	}
+
 	// make a map of sql tags to sql tags to make lookup easy
 	returnTags := make(map[string]struct{}, 0)
 	for _, ret := range returning {
@@ -314,13 +376,13 @@ func (hdb *HeraldDB) addItem(query interface{}, returning []string) (interface{}
 		}
 		if !IsZero(f) && f.CanInterface() {
 			// insert the field name
-			insertQ += rType.Field(i).Tag.Get("sql")
-			valueQ += fmt.Sprintf("$%d", valNum)
-			valNum++
-			if i < rQuery.NumField()-1 {
+			if len(insertVals) > 0 {
 				insertQ += ", "
 				valueQ += ", "
 			}
+			insertQ += rType.Field(i).Tag.Get("sql")
+			valueQ += fmt.Sprintf("$%d", valNum)
+			valNum++
 			insertVals = append(insertVals, f.Interface())
 		}
 	}
@@ -334,6 +396,9 @@ func (hdb *HeraldDB) addItem(query interface{}, returning []string) (interface{}
 		err = row.Scan(returnVal...)
 	} else {
 		err = row.Scan()
+		if err == sql.ErrNoRows {
+			err = nil
+		}
 	}
 	if err != nil {
 		return nil, err

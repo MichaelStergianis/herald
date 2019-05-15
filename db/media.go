@@ -60,6 +60,8 @@ func unmarshal(src map[string]interface{}, dest interface{}) (err error) {
 }
 
 // ValidFields ...
+// Creates a lookup set of field names based on the given tag. Structs
+// returned by the map are the empty struct (cheap encoding of set).
 func ValidFields(tag string, query interface{}) (map[string]struct{}, error) {
 	m := map[string]struct{}{}
 	qType := reflect.TypeOf(query)
@@ -145,13 +147,19 @@ func (g *Genre) SetID(ID int64) {
 // Album ...
 // Album representation.
 type Album struct {
-	ID        int64   `edn:"id"         json:"id"         sql:"id"`
-	Artist    int64   `edn:"artist"     json:"artist"     sql:"artist"`
+	// primary key
+	ID int64 `edn:"id" json:"id" sql:"id"`
+	// foreign key
+	Artist int64 `edn:"artist" json:"artist" sql:"artist"`
+
+	// not null
+	Title string `edn:"title" json:"title" sql:"title"`
+	Path  string `edn:"-"     json:"-"     sql:"fs_path"`
+
+	// null-able
 	Year      int     `edn:"year"       json:"year"       sql:"release_year"`
 	NumTracks int     `edn:"num-tracks" json:"num-tracks" sql:"num_tracks"`
 	NumDisks  int     `edn:"num-disks"  json:"num-disks"  sql:"num_disks"`
-	Title     string  `edn:"title"      json:"title"      sql:"title"`
-	Path      string  `edn:"-"          json:"-"          sql:"fs_path"`
 	Duration  float64 `edn:"duration"   json:"duration"   sql:"duration"` // seconds
 }
 
@@ -173,18 +181,25 @@ func (a Album) GetPath() string {
 // Song ...
 // Song representation.
 type Song struct {
-	ID        int64   `edn:"id"         json:"id"         sql:"id"`
-	Album     int64   `edn:"album"      json:"album"      sql:"album"`
-	Genre     int64   `edn:"genre"      json:"genre"      sql:"genre"`
-	Path      string  `edn:"-"          json:"-"          sql:"fs_path"`
-	Title     string  `edn:"title"      json:"title"      sql:"title"`
-	Track     int     `edn:"track"      json:"track"      sql:"track"`
-	NumTracks int     `edn:"num-tracks" json:"num-tracks" sql:"num_tracks"`
-	Disk      int     `edn:"disk"       json:"disk"       sql:"disk"`
-	NumDisks  int     `edn:"num-disks"  json:"num-disks"  sql:"num_disks"`
-	Size      int     `edn:"size"       json:"size"       sql:"song_size"` // bytes
-	Duration  float64 `edn:"duration"   json:"duration"   sql:"duration"`  // seconds
-	Artist    string  `edn:"artist"     json:"artist"     sql:"artist"`
+	// primary key
+	ID int64 `edn:"id" json:"id" sql:"id"`
+
+	// foreign keys
+	Album int64 `edn:"album" json:"album" sql:"album"`
+	Genre int64 `edn:"genre" json:"genre" sql:"genre"`
+
+	// not null
+	Path     string  `edn:"-"        json:"-"        sql:"fs_path"`
+	Title    string  `edn:"title"    json:"title"    sql:"title"`
+	Size     int64   `edn:"size"     json:"size"     sql:"song_size"` // bytes
+	Duration float64 `edn:"duration" json:"duration" sql:"duration"`  // seconds
+
+	// null-able
+	Track     int    `edn:"track"      json:"track"      sql:"track"`
+	NumTracks int    `edn:"num-tracks" json:"num-tracks" sql:"num_tracks"`
+	Disk      int    `edn:"disk"       json:"disk"       sql:"disk"`
+	NumDisks  int    `edn:"num-disks"  json:"num-disks"  sql:"num_disks"`
+	Artist    string `edn:"artist"     json:"artist"     sql:"artist"`
 }
 
 // GetID ...
@@ -210,8 +225,8 @@ type SongInLibrary struct {
 
 // Image ...
 type Image struct {
-	ID   int64  `edn:"id"   json:"id"   sql:"id"`
-	Path string `edn:"-"    json:"-"    sql:"fs_path"`
+	ID   int64  `edn:"id" json:"id" sql:"id"`
+	Path string `edn:"-"  json:"-"  sql:"fs_path"`
 }
 
 // GetID ...
