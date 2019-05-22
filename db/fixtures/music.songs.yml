@@ -63,3 +63,16 @@
   song_size: 204299
   duration: 1999
   artist: BADBADNOTGOOD
+
+- id: 6
+  album: 1
+  genre: 1
+  fs_path: /home/test/Music/BADBADNOTGOOD/III/04 Something.mp3
+  title: Something
+  song_size: 91841
+  duration: 9381
+  track: null
+  num_tracks: null
+  disk: null
+  num_disks: null
+  artist: BADBADNOTGOOD
