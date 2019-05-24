@@ -68,42 +68,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// TestStripToArtist ...
-func TestStripToArtist(t *testing.T) {
-	song := Song{
-		ID:   3,
-		Path: "/home/tests/MyMusic/Iron Maiden/Killers/01 The Ides of March.mp3",
-	}
-
-	lib := Library{
-		Path: "/home/tests/MyMusic",
-	}
-
-	fsPath := stripToArtist(song.Path, lib)
-
-	if fsPath != "/home/tests/MyMusic/Iron Maiden" {
-		t.Error("incorrect string returned from strip")
-	}
-}
-
-// TestStripToAlbum ...
-func TestStripToAlbum(t *testing.T) {
-	song := Song{
-		ID:   3,
-		Path: "/home/tests/MyMusic/Iron Maiden/Killers/01 The Ides of March.mp3",
-	}
-
-	artist := Artist{
-		Path: "/home/tests/MyMusic/Iron Maiden",
-	}
-
-	fsPath := stripToAlbum(song.Path, artist)
-
-	if fsPath != "/home/tests/MyMusic/Iron Maiden/Killers" {
-		t.Error("incorrect string returned from strip")
-	}
-}
-
 // TestCountTable ...
 func TestCountTable(t *testing.T) {
 	prepareDB()
@@ -346,7 +310,7 @@ func TestQuerySelection(t *testing.T) {
 	}
 
 	for testCase, test := range testCases {
-		q, v, nV, err := querySelection(test.rQuery)
+		q, v, err := querySelection(test.rQuery)
 		// query string check
 		if q != test.query {
 			t.Errorf("returned query did not match expected during test case: %d\n"+
@@ -365,22 +329,10 @@ func TestQuerySelection(t *testing.T) {
 			}
 		}
 
-		// null values check
-		for i := 0; i < len(v); i++ {
-			result := reflect.ValueOf(nV[i])
-			expected := reflect.ValueOf(test.nullValues[i])
-			if result.Elem().Interface() != expected.Elem().Interface() {
-				t.Errorf("returned value did not match expected during test case: %d\n"+
-					"\t\texpected: %v\n"+
-					"\t\tresult:   %v\n", testCase, expected.Elem(), result.Elem())
-			}
-		}
-
 		// error check
 		if err != test.err {
 			t.Error(err)
 		}
-
 	}
 }
 
@@ -395,7 +347,6 @@ func TestGetUniqueItem(t *testing.T) {
 	verify := Artist{
 		ID:   1,
 		Name: "BADBADNOTGOOD",
-		Path: "/home/test/Music/BADBADNOTGOOD",
 	}
 
 	err := hdb.GetUniqueItem(query)
@@ -419,68 +370,76 @@ func TestGetItem(t *testing.T) {
 		orderby []string
 		answer  []interface{}
 	}{
-		{Song{Artist: "BADBADNOTGOOD"}, "edn", []string{},
+		{Song{Artist: NewNullString("BADBADNOTGOOD")}, "edn", []string{},
 			[]interface{}{
-				Song{ID: 1, Album: 1, Genre: 1,
+				Song{ID: 1, Album: NewNullInt64(1), Genre: NewNullInt64(1),
 					Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
 					Title: "In the Night",
-					Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
+					Track: NewNullInt64(1), NumTracks: NewNullInt64(20),
+					Disk: NewNullInt64(1), NumDisks: NewNullInt64(1),
 					Size: 204192, Duration: 1993,
-					Artist: "BADBADNOTGOOD"},
-				Song{ID: 5, Album: 1, Genre: 1,
+					Artist: NewNullString("BADBADNOTGOOD")},
+				Song{ID: 5, Album: NewNullInt64(1), Genre: NewNullInt64(1),
 					Path:  "/home/test/Music/BADBADNOTGOOD/III/02 Triangle.mp3",
 					Title: "Triangle",
-					Track: 2, NumTracks: 20, Disk: 1, NumDisks: 1,
-					Size: 204299, Duration: 1999,
-					Artist: "BADBADNOTGOOD"}}},
+					Size:  204299, Duration: 1999,
+					Track: NewNullInt64(2), NumTracks: NewNullInt64(20),
+					Disk: NewNullInt64(1), NumDisks: NewNullInt64(1),
+					Artist: NewNullString("BADBADNOTGOOD")},
+				Song{ID: 6, Album: NewNullInt64(1), Genre: NewNullInt64(1),
+					Path:     "/home/test/Music/BADBADNOTGOOD/III/04 Something.mp3",
+					Title:    "Something",
+					Size:     91841,
+					Duration: 9381,
+					Artist:   NewNullString("BADBADNOTGOOD")}}},
 		// order by single element
-		{Album{Artist: 1}, "json", []string{"num-tracks"},
+		{Album{Artist: NewNullInt64(1)}, "json", []string{"num-tracks"},
 			[]interface{}{
-				Album{ID: 5, Artist: 1, Year: 2012,
-					NumTracks: 19, NumDisks: 1, Duration: 1688,
-					Title: "IV", Path: "/home/test/Music/BADBADNOTGOOD/IV"},
-				Album{ID: 1, Artist: 1, Year: 2011,
-					NumTracks: 20, NumDisks: 1, Duration: 1688,
-					Title: "III", Path: "/home/test/Music/BADBADNOTGOOD/III"},
+				Album{ID: 5, Artist: NewNullInt64(1), Year: NewNullInt64(2012),
+					NumTracks: NewNullInt64(19), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1688), Title: "IV"},
+				Album{ID: 1, Artist: NewNullInt64(1), Year: NewNullInt64(2011),
+					NumTracks: NewNullInt64(20), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1688), Title: "III"},
 			},
 		},
 
 		// order by multiple elemnts
-		{Album{NumDisks: 1}, "edn", []string{"duration", "num-tracks"},
+		{Album{NumDisks: NewNullInt64(1)}, "edn", []string{"duration", "num-tracks"},
 			[]interface{}{
-				Album{ID: 5, Artist: 1, Year: 2012,
-					NumTracks: 19, NumDisks: 1, Duration: 1688,
-					Title: "IV", Path: "/home/test/Music/BADBADNOTGOOD/IV"},
-				Album{ID: 1, Artist: 1, Year: 2011,
-					NumTracks: 20, NumDisks: 1, Duration: 1688,
-					Title: "III", Path: "/home/test/Music/BADBADNOTGOOD/III"},
-				Album{ID: 4, Artist: 4, Year: 1985,
-					NumTracks: 13, NumDisks: 1, Duration: 1756,
-					Title: "Rust in Peace", Path: "/home/test/Music/Megadeth/Rust in Peace"},
-				Album{ID: 2, Artist: 2, Year: 2001,
-					NumTracks: 10, NumDisks: 1, Duration: 1800,
-					Title: "Sour Soul", Path: "/home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul"},
-				Album{ID: 3, Artist: 3, Year: 1980,
-					NumTracks: 8, NumDisks: 1, Duration: 15440,
-					Title: "Killers", Path: "/home/tests/MyMusic/Iron Maiden/Killers"},
+				Album{ID: 5, Artist: NewNullInt64(1), Year: NewNullInt64(2012),
+					NumTracks: NewNullInt64(19), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1688), Title: "IV"},
+				Album{ID: 1, Artist: NewNullInt64(1), Year: NewNullInt64(2011),
+					NumTracks: NewNullInt64(20), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1688), Title: "III"},
+				Album{ID: 4, Artist: NewNullInt64(4), Year: NewNullInt64(1985),
+					NumTracks: NewNullInt64(13), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1756), Title: "Rust in Peace"},
+				Album{ID: 2, Artist: NewNullInt64(2), Year: NewNullInt64(2001),
+					NumTracks: NewNullInt64(10), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1800), Title: "Sour Soul"},
+				Album{ID: 3, Artist: NewNullInt64(3), Year: NewNullInt64(1980),
+					NumTracks: NewNullInt64(8), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(15440), Title: "Killers"},
 			}},
-		{Album{NumDisks: 1}, "edn", []string{"duration", "year"},
+		{Album{NumDisks: NewNullInt64(1)}, "edn", []string{"duration", "year"},
 			[]interface{}{
-				Album{ID: 1, Artist: 1, Year: 2011,
-					NumTracks: 20, NumDisks: 1, Duration: 1688,
-					Title: "III", Path: "/home/test/Music/BADBADNOTGOOD/III"},
-				Album{ID: 5, Artist: 1, Year: 2012,
-					NumTracks: 19, NumDisks: 1, Duration: 1688,
-					Title: "IV", Path: "/home/test/Music/BADBADNOTGOOD/IV"},
-				Album{ID: 4, Artist: 4, Year: 1985,
-					NumTracks: 13, NumDisks: 1, Duration: 1756,
-					Title: "Rust in Peace", Path: "/home/test/Music/Megadeth/Rust in Peace"},
-				Album{ID: 2, Artist: 2, Year: 2001,
-					NumTracks: 10, NumDisks: 1, Duration: 1800,
-					Title: "Sour Soul", Path: "/home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul"},
-				Album{ID: 3, Artist: 3, Year: 1980,
-					NumTracks: 8, NumDisks: 1, Duration: 15440,
-					Title: "Killers", Path: "/home/tests/MyMusic/Iron Maiden/Killers"},
+				Album{ID: 1, Artist: NewNullInt64(1), Year: NewNullInt64(2011),
+					NumTracks: NewNullInt64(20), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1688), Title: "III"},
+				Album{ID: 5, Artist: NewNullInt64(1), Year: NewNullInt64(2012),
+					NumTracks: NewNullInt64(19), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1688), Title: "IV"},
+				Album{ID: 4, Artist: NewNullInt64(4), Year: NewNullInt64(1985),
+					NumTracks: NewNullInt64(13), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1756), Title: "Rust in Peace"},
+				Album{ID: 2, Artist: NewNullInt64(2), Year: NewNullInt64(2001),
+					NumTracks: NewNullInt64(10), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(1800), Title: "Sour Soul"},
+				Album{ID: 3, Artist: NewNullInt64(3), Year: NewNullInt64(1980),
+					NumTracks: NewNullInt64(8), NumDisks: NewNullInt64(1),
+					Duration: NewNullFloat64(15440), Title: "Killers"},
 			}},
 	}
 
@@ -516,14 +475,16 @@ func TestAddItem(t *testing.T) {
 		// no genre
 		{
 			&Song{
-				Album: 1, Path: "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
-				Title: "Sax Stuff", Track: 3, NumTracks: 20, Disk: 1, NumDisks: 1, Size: 21134,
-				Duration: 168, Artist: "BADBADNOTGOOD & LeLand WILLY"},
+				Album: NewNullInt64(1), Path: "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
+				Title: "Sax Stuff", Track: NewNullInt64(3), NumTracks: NewNullInt64(20),
+				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1), Size: 21134,
+				Duration: 168, Artist: NewNullString("BADBADNOTGOOD & LeLand WILLY")},
 			[]string{"id"},
-			&Song{ID: 10001, Album: 1, Genre: 0,
+			&Song{ID: 10001, Album: NewNullInt64(1), Genre: NewNullInt64(0),
 				Path:  "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
-				Title: "Sax Stuff", Track: 3, NumTracks: 20, Disk: 1, NumDisks: 1,
-				Size: 21134, Duration: 168, Artist: "BADBADNOTGOOD & LeLand WILLY"},
+				Title: "Sax Stuff", Track: NewNullInt64(3), NumTracks: NewNullInt64(20),
+				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1),
+				Size: 21134, Duration: 168, Artist: NewNullString("BADBADNOTGOOD & LeLand WILLY")},
 			nil,
 		},
 		// add a genre, then use it
@@ -532,7 +493,11 @@ func TestAddItem(t *testing.T) {
 		},
 
 		{
-			&Song{},
+			&Song{Album: NullInt64{},
+				Path: "/home/test/Music/BADBADNOTGOOD/III/05 TT.mp3", Title: "TT",
+				Track: NewNullInt64(5), NumTracks: NewNullInt64(20),
+				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1), Size: 2841,
+				Duration: 111, Artist: NullString{}},
 			[]string{"id"},
 			&Song{},
 			ErrNonUnique{},
@@ -541,6 +506,10 @@ func TestAddItem(t *testing.T) {
 
 	for testCase, test := range testCases {
 		q, err := hdb.addItem(test.query, test.returning)
+		fmt.Printf("%v\n", testCase)
+
+		fmt.Printf("%T %v\n", q, q)
+		fmt.Printf("%T %v\n", test.query, test.query)
 
 		if err != test.expErr {
 			t.Errorf("test case %d failed: %v\n", testCase, err)

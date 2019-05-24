@@ -236,8 +236,15 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		return nil
 	}
 
-	s.Track, s.NumTracks = metadata.Track()
-	s.Disk, s.NumDisks = metadata.Disc()
+	t, nT := metadata.Track()
+	d, nD := metadata.Disc()
+	sqlInts := []*NullInt64{&s.Track, &s.NumTracks, &s.Disk, &s.NumDisks}
+	for i, v := range []int{t, nT, d, nD} {
+		sqlInts[i].Int64 = int64(v)
+		if sqlInts[i].Int64 != 0 {
+			sqlInts[i].Valid = true
+		}
+	}
 
 	s.Duration, err = duration(*s)
 	if err != nil {
@@ -258,7 +265,6 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 	// Add the album artist information
 	artist := &Artist{
 		Name: metadata.AlbumArtist(),
-		Path: stripToArtist(fsPath, lib),
 	}
 	if artist.Name != "" {
 		_, err = hdb.addItem(artist, []string{"id"})
@@ -267,11 +273,16 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		}
 	}
 
+	albumYear := NewNullInt64(int64(metadata.Year()))
+	albumArtist := NewNullInt64(artist.ID)
+	if albumArtist.Int64 != 0 {
+		albumArtist.Valid = true
+	}
+
 	// Add the album information
 	album := &Album{
-		Path:      stripToAlbum(fsPath, *artist),
-		Artist:    artist.ID,
-		Year:      metadata.Year(),
+		Artist:    albumArtist,
+		Year:      albumYear,
 		NumTracks: s.NumTracks,
 		NumDisks:  s.NumDisks,
 		Title:     metadata.Album(),
@@ -281,8 +292,13 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		return err
 	}
 
-	s.Album = album.ID
-	s.Genre = genre.ID
+	s.Album = NewNullInt64(album.ID)
+	s.Genre = NewNullInt64(genre.ID)
+	for _, v := range []*NullInt64{&s.Album, &s.Genre} {
+		if v.Int64 != 0 {
+			v.Valid = true
+		}
+	}
 
 	_, err = hdb.addItem(s, []string{"id"})
 	if err != nil {

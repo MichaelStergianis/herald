@@ -10,11 +10,6 @@ const (
 	imageType
 )
 
-// Pathable ...
-type Pathable interface {
-	GetPath() string
-}
-
 // Queryable ...
 type Queryable interface {
 	GetID() int64
@@ -99,17 +94,11 @@ func (l *Library) SetID(ID int64) {
 	l.ID = ID
 }
 
-// GetPath ...
-func (l Library) GetPath() string {
-	return l.Path
-}
-
 // Artist ...
 // A representation of an artist.
 type Artist struct {
 	ID   int64  `edn:"id"   json:"id"   sql:"id"`
 	Name string `edn:"name" json:"name" sql:"name"`
-	Path string `edn:"-"    json:"-"    sql:"fs_path"`
 }
 
 // GetID ...
@@ -120,11 +109,6 @@ func (a Artist) GetID() int64 {
 // SetID ...
 func (a *Artist) SetID(ID int64) {
 	a.ID = ID
-}
-
-// GetPath ...
-func (a Artist) GetPath() string {
-	return a.Path
 }
 
 // Genre ...
@@ -150,17 +134,16 @@ type Album struct {
 	// primary key
 	ID int64 `edn:"id" json:"id" sql:"id"`
 	// foreign key
-	Artist int64 `edn:"artist" json:"artist" sql:"artist"`
+	Artist NullInt64 `edn:"artist" json:"artist" sql:"artist"`
 
 	// not null
 	Title string `edn:"title" json:"title" sql:"title"`
-	Path  string `edn:"-"     json:"-"     sql:"fs_path"`
 
 	// null-able
-	Year      int     `edn:"year"       json:"year"       sql:"release_year"`
-	NumTracks int     `edn:"num-tracks" json:"num-tracks" sql:"num_tracks"`
-	NumDisks  int     `edn:"num-disks"  json:"num-disks"  sql:"num_disks"`
-	Duration  float64 `edn:"duration"   json:"duration"   sql:"duration"` // seconds
+	Year      NullInt64   `edn:"year"       json:"year"       sql:"release_year"`
+	NumTracks NullInt64   `edn:"num-tracks" json:"num-tracks" sql:"num_tracks"`
+	NumDisks  NullInt64   `edn:"num-disks"  json:"num-disks"  sql:"num_disks"`
+	Duration  NullFloat64 `edn:"duration"   json:"duration"   sql:"duration"` // seconds
 }
 
 // GetID ...
@@ -173,11 +156,6 @@ func (a *Album) SetID(ID int64) {
 	a.ID = ID
 }
 
-// GetPath ...
-func (a Album) GetPath() string {
-	return a.Path
-}
-
 // Song ...
 // Song representation.
 type Song struct {
@@ -185,8 +163,8 @@ type Song struct {
 	ID int64 `edn:"id" json:"id" sql:"id"`
 
 	// foreign keys
-	Album int64 `edn:"album" json:"album" sql:"album"`
-	Genre int64 `edn:"genre" json:"genre" sql:"genre"`
+	Album NullInt64 `edn:"album" json:"album" sql:"album"`
+	Genre NullInt64 `edn:"genre" json:"genre" sql:"genre"`
 
 	// not null
 	Path     string  `edn:"-"        json:"-"        sql:"fs_path"`
@@ -195,11 +173,11 @@ type Song struct {
 	Duration float64 `edn:"duration" json:"duration" sql:"duration"`  // seconds
 
 	// null-able
-	Track     int    `edn:"track"      json:"track"      sql:"track"`
-	NumTracks int    `edn:"num-tracks" json:"num-tracks" sql:"num_tracks"`
-	Disk      int    `edn:"disk"       json:"disk"       sql:"disk"`
-	NumDisks  int    `edn:"num-disks"  json:"num-disks"  sql:"num_disks"`
-	Artist    string `edn:"artist"     json:"artist"     sql:"artist"`
+	Track     NullInt64  `edn:"track"      json:"track"      sql:"track"`
+	NumTracks NullInt64  `edn:"num-tracks" json:"num-tracks" sql:"num_tracks"`
+	Disk      NullInt64  `edn:"disk"       json:"disk"       sql:"disk"`
+	NumDisks  NullInt64  `edn:"num-disks"  json:"num-disks"  sql:"num_disks"`
+	Artist    NullString `edn:"artist"     json:"artist"     sql:"artist"`
 }
 
 // GetID ...
@@ -212,15 +190,10 @@ func (s *Song) SetID(ID int64) {
 	s.ID = ID
 }
 
-// GetPath ...
-func (s Song) GetPath() string {
-	return s.Path
-}
-
 // SongInLibrary ...
 type SongInLibrary struct {
-	SongID    int64 `edn:"song-id" json:"lib-id" sql:"song_id"`
-	LibraryID int64 `edn:"lib-id" json:"lib-id" sql:"library_id"`
+	SongID    NullInt64 `edn:"song-id" json:"lib-id" sql:"song_id"`
+	LibraryID NullInt64 `edn:"lib-id" json:"lib-id" sql:"library_id"`
 }
 
 // Image ...
@@ -239,13 +212,8 @@ func (i *Image) SetID(ID int64) {
 	i.ID = ID
 }
 
-// GetPath ...
-func (i Image) GetPath() string {
-	return i.Path
-}
-
 // ImageInAlbum ...
 type ImageInAlbum struct {
-	AlbumID int64 `edn:"album-id" json:"album-id" sql:"album_id"`
-	ImageID int64 `edn:"img-id"   json:"img-id"   sql:"image_id"`
+	AlbumID NullInt64 `edn:"album-id" json:"album-id" sql:"album_id"`
+	ImageID NullInt64 `edn:"img-id"   json:"img-id"   sql:"image_id"`
 }

@@ -1,16 +1,12 @@
 # music.artists.yml
 - id: 1
   name: BADBADNOTGOOD
-  fs_path: /home/test/Music/BADBADNOTGOOD
 
 - id: 2
   name: BADBADNOTGOOD & Ghostface Killah
-  fs_path: /home/test/Music/BADBADNOTGOOD & Ghostface Killah
 
 - id: 3
   name: Iron Maiden
-  fs_path: /home/tests/MyMusic/Iron Maiden
 
 - id: 4
   name: Megadeth
-  fs_path: /home/test/Music/Megadeth

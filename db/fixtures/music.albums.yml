@@ -5,7 +5,6 @@
   num_tracks: 20
   num_disks: 1
   title: III
-  fs_path: /home/test/Music/BADBADNOTGOOD/III
   duration: 1688
 
 - id: 2
@@ -14,7 +13,6 @@
   num_tracks: 10
   num_disks: 1
   title: Sour Soul
-  fs_path: /home/test/Music/BADBADNOTGOOD & Ghostface Killah/Sour Soul
   duration: 1800
 
 - id: 3
@@ -23,7 +21,6 @@
   num_tracks: 8
   num_disks: 1
   title: Killers
-  fs_path: /home/tests/MyMusic/Iron Maiden/Killers
   duration: 15440
 
 - id: 4
@@ -32,7 +29,6 @@
   num_tracks: 13
   num_disks: 1
   title: Rust in Peace
-  fs_path: /home/test/Music/Megadeth/Rust in Peace
   duration: 1756
 
 - id: 5
@@ -41,5 +37,4 @@
   num_tracks: 19
   num_disks: 1
   title: IV
-  fs_path: /home/test/Music/BADBADNOTGOOD/IV
   duration: 1688

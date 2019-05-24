@@ -135,7 +135,7 @@ func ValueToScanner(val interface{}) (sql.Scanner, error) {
 }
 
 // querySelection ...
-func querySelection(rQuery reflect.Value) (query string, values []interface{}, nullValues []sql.Scanner, err error) {
+func querySelection(rQuery reflect.Value) (query string, values []interface{}, err error) {
 	if rQuery.Kind() == reflect.Ptr {
 		rQuery = rQuery.Elem()
 	}
@@ -143,7 +143,6 @@ func querySelection(rQuery reflect.Value) (query string, values []interface{}, n
 
 	query = "SELECT "
 	values = make([]interface{}, 0)
-	nullValues = make([]sql.Scanner, 0)
 
 	for i := 0; i < rQuery.NumField(); i++ {
 		f := rQuery.Field(i)
@@ -155,19 +154,14 @@ func querySelection(rQuery reflect.Value) (query string, values []interface{}, n
 
 			// add values to the respective slices
 			if !f.CanAddr() {
-				return "", nil, nil, ErrCannotAddr
+				return "", nil, ErrCannotAddr
 			}
 			values = append(values, f.Addr().Interface())
-			s, err := ValueToScanner(f.Interface())
-			if err != nil {
-				return "", nil, nil, err
-			}
-			nullValues = append(nullValues, s)
 		}
 
 	}
 
-	return query, values, nullValues, nil
+	return query, values, nil
 }
 
 // prepareQuery ...
