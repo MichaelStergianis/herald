@@ -73,15 +73,6 @@ func (v *NullBool) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-// String ...
-func (v NullBool) String() string {
-	s := "null"
-	if v.Valid {
-		s = fmt.Sprintf("%v", v.Bool)
-	}
-	return s
-}
-
 // NullFloat64 ...
 type NullFloat64 struct{ sql.NullFloat64 }
 
@@ -144,15 +135,6 @@ func (v *NullFloat64) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-// String ...
-func (v NullFloat64) String() string {
-	s := "null"
-	if v.Valid {
-		s = fmt.Sprintf("%v", v.Float64)
-	}
-	return s
-}
-
 // NullInt64 ...
 type NullInt64 struct{ sql.NullInt64 }
 
@@ -213,15 +195,6 @@ func (v *NullInt64) UnmarshalJSON(bytes []byte) error {
 	v.Int64 = i
 	v.Valid = true
 	return nil
-}
-
-// String ...
-func (v NullInt64) String() string {
-	s := "null"
-	if v.Valid {
-		s = fmt.Sprintf("%v", v.Int64)
-	}
-	return s
 }
 
 // NullString ...
