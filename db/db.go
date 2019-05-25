@@ -15,9 +15,9 @@ import (
 	"strconv"
 
 	// pq is used behind the scenes, but never explicitly used
+	"github.com/dhowden/tag"
 	_ "github.com/lib/pq"
 
-	"github.com/dhowden/tag"
 	ft "gopkg.in/h2non/filetype.v1"
 )
 
@@ -274,8 +274,9 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 	}
 
 	albumYear := NewNullInt64(int64(metadata.Year()))
-	albumArtist := NewNullInt64(artist.ID)
-	if albumArtist.Int64 != 0 {
+	var albumArtist NullInt64
+	if artist.ID != 0 {
+		albumArtist.Int64 = artist.ID
 		albumArtist.Valid = true
 	}
 
@@ -287,13 +288,18 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		NumDisks:  s.NumDisks,
 		Title:     metadata.Album(),
 	}
+
 	_, err = hdb.addItem(album, []string{"id"})
 	if err != nil {
 		return err
 	}
 
-	s.Album = NewNullInt64(album.ID)
-	s.Genre = NewNullInt64(genre.ID)
+	if album.ID != 0 {
+		s.Album = NewNullInt64(album.ID)
+	}
+	if genre.ID != 0 {
+		s.Genre = NewNullInt64(genre.ID)
+	}
 	for _, v := range []*NullInt64{&s.Album, &s.Genre} {
 		if v.Int64 != 0 {
 			v.Valid = true
@@ -426,8 +432,6 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
 		switch fileType(fsPath) {
 		case musicType:
 			{
-				// fmt.Printf("lib: %v, song: %v\n", lib, fsPath)
-
 				err = hdb.processMedia(fsPath, lib)
 				if err != nil {
 					log.Printf("%v", err)

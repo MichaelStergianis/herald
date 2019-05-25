@@ -64,13 +64,14 @@ func TestNewUniqueQueryHandler(t *testing.T) {
 		&heraldDB.Genre{ID: 1, Name: "Jazz"},
 		&heraldDB.Artist{ID: 1, Name: "BADBADNOTGOOD"},
 		&heraldDB.Album{
-			ID: 1, Artist: 1, Year: 2011, NumTracks: 20,
-			NumDisks: 1, Title: "III", Duration: 1688,
+			ID: 1, Artist: heraldDB.NewNullInt64(1), Year: heraldDB.NewNullInt64(2011), NumTracks: heraldDB.NewNullInt64(20),
+			NumDisks: heraldDB.NewNullInt64(1), Title: "III", Duration: heraldDB.NewNullFloat64(1688),
 		},
 		&heraldDB.Song{
-			ID: 1, Album: 1, Genre: 1, Title: "In the Night",
-			Track: 1, NumTracks: 20, Disk: 1, NumDisks: 1,
-			Size: 204192, Duration: 1993, Artist: "BADBADNOTGOOD",
+			ID: 1, Album: heraldDB.NewNullInt64(1), Genre: heraldDB.NewNullInt64(1), Title: "In the Night",
+			Track: heraldDB.NewNullInt64(1), NumTracks: heraldDB.NewNullInt64(20),
+			Disk: heraldDB.NewNullInt64(1), NumDisks: heraldDB.NewNullInt64(1),
+			Size: 204192, Duration: 1993, Artist: heraldDB.NewNullString("BADBADNOTGOOD"),
 		},
 		&heraldDB.Image{ID: 1},
 	}

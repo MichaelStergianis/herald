@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/lib/pq"
 )
 
 var (
@@ -249,7 +251,6 @@ func TestProcessMedia(t *testing.T) {
 	}
 
 	ts := path.Join(testLib, testSong)
-	fmt.Printf("%s\n", ts)
 
 	err = hdb.processMedia(ts, libs[testLibName])
 	if err != nil {
@@ -272,16 +273,16 @@ func TestScanLibrary(t *testing.T) {
 		t.Error(err)
 	}
 
-	songs, err := hdb.GetSongsInLibrary(libs[testLibName])
-	if err != nil {
-		t.Error(err)
-	}
+	// songs, err := hdb.GetSongsInLibrary(libs[testLibName])
+	// if err != nil {
+	// 	t.Error(err)
+	// }
 
-	fmt.Printf("%v\n", songs)
+	// fmt.Printf("%+v\n", songs)
 
-	for _, song := range songs {
-		fmt.Printf("%+v\n", song)
-	}
+	// for _, song := range songs {
+	// 	fmt.Printf("%+v\n", song)
+	// }
 }
 
 // TestQuerySelection ...
@@ -293,7 +294,7 @@ func TestQuerySelection(t *testing.T) {
 		nullValues []sql.Scanner
 		err        error
 	}{
-		{reflect.ValueOf(&Artist{}), "SELECT id, name, fs_path",
+		{reflect.ValueOf(&Artist{}), "SELECT id, name",
 			[]interface{}{
 				new(int64),
 				new(string),
@@ -480,7 +481,7 @@ func TestAddItem(t *testing.T) {
 				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1), Size: 21134,
 				Duration: 168, Artist: NewNullString("BADBADNOTGOOD & LeLand WILLY")},
 			[]string{"id"},
-			&Song{ID: 10001, Album: NewNullInt64(1), Genre: NewNullInt64(0),
+			&Song{ID: 10001, Album: NewNullInt64(1), Genre: NullInt64{},
 				Path:  "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
 				Title: "Sax Stuff", Track: NewNullInt64(3), NumTracks: NewNullInt64(20),
 				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1),
@@ -491,27 +492,63 @@ func TestAddItem(t *testing.T) {
 		{
 			&Genre{Name: "Jazz Hop"}, []string{"id"}, &Genre{10001, "Jazz Hop"}, nil,
 		},
-
 		{
-			&Song{Album: NullInt64{},
+			&Song{Album: NullInt64{}, Genre: NewNullInt64(10001),
 				Path: "/home/test/Music/BADBADNOTGOOD/III/05 TT.mp3", Title: "TT",
 				Track: NewNullInt64(5), NumTracks: NewNullInt64(20),
 				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1), Size: 2841,
 				Duration: 111, Artist: NullString{}},
 			[]string{"id"},
-			&Song{},
-			ErrNonUnique{},
+			&Song{ID: 10002, Album: NullInt64{}, Genre: NewNullInt64(10001),
+				Path: "/home/test/Music/BADBADNOTGOOD/III/05 TT.mp3", Title: "TT",
+				Track: NewNullInt64(5), NumTracks: NewNullInt64(20),
+				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1), Size: 2841,
+				Duration: 111, Artist: NullString{}},
+			nil,
+		},
+
+		// don't provide path for lookup
+		{
+			&Song{Artist: NewNullString("BADBADNOTGOOD")},
+			[]string{"id"},
+			&Song{Artist: NewNullString("BADBADNOTGOOD")},
+			&pq.Error{Severity: "ERROR", Code: "23502",
+				Message: "null value in column \"fs_path\" violates not-null constraint",
+				Detail: "Failing row contains (10003, null, null, null, " +
+					"null, null, null, null, null, null, null, BADBADNOTGOOD).",
+				Hint: "", Position: "", InternalPosition: "", InternalQuery: "",
+				Where: "", Schema: "music", Table: "songs", Column: "fs_path",
+				DataTypeName: "", Constraint: "", File: "execMain.c", Line: "2042", Routine: "ExecConstraints"},
+		},
+
+		{
+			&Song{Path: "/", Title: "test", Size: 444, Duration: 4445,
+				Artist: NewNullString("BADBADNOTGOOD")},
+			[]string{"id"},
+			&Song{ID: 10004, Path: "/", Title: "test", Size: 444, Duration: 4445,
+				Artist: NewNullString("BADBADNOTGOOD")},
+			nil,
 		},
 	}
 
 	for testCase, test := range testCases {
 		q, err := hdb.addItem(test.query, test.returning)
-		fmt.Printf("%v\n", testCase)
+		fmt.Printf("testCase = %v\n", testCase)
 
 		fmt.Printf("%T %v\n", q, q)
-		fmt.Printf("%T %v\n", test.query, test.query)
+		fmt.Printf("%T %v\n\n", test.query, test.query)
 
-		if err != test.expErr {
+		// test case 4 (index 3) is a special case, returns a pointer to an
+		// error struct, so equality testing is difficult
+		var secondaryErrCheck = true
+		if _, ok := test.expErr.(*pq.Error); ok {
+			secondaryErrCheck = false
+			if *err.(*pq.Error) != *test.expErr.(*pq.Error) {
+				t.Errorf("test case %d failed: %v\n", testCase, err)
+			}
+		}
+
+		if err != test.expErr && secondaryErrCheck {
 			t.Errorf("test case %d failed: %v\n", testCase, err)
 		}
 
@@ -520,6 +557,26 @@ func TestAddItem(t *testing.T) {
 		rA := reflect.ValueOf(test.answer)
 		if rQ.Elem().Interface() != rA.Elem().Interface() {
 			t.Errorf("test case %d failed:\n\texpected: %v\n\tresult:   %v\n", testCase, test.answer, q)
+		}
+	}
+}
+
+// TestExtra ...
+func TestExtra(t *testing.T) {
+	prepareDB()
+
+	for _, col := range []interface{}{&Album{}, &Artist{}, &Song{}, &Library{}} {
+		fmt.Printf("\n%v\n", reflect.TypeOf(col))
+
+		cols, err := hdb.GetItem(col, []string{"id"})
+
+		if err != nil {
+			t.Error(err)
+		}
+
+		for i, c := range cols {
+			fmt.Printf("\t%d %#v\n", i, c)
+
 		}
 	}
 }

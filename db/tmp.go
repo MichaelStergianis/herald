@@ -66,21 +66,15 @@ func NewTagConverter(queryType interface{}, from, to string) (converter map[stri
 
 // IsZero ...
 func IsZero(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Array, reflect.String:
-		return v.Len() == 0
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
-		return v.IsNil()
+	t := v.Type()
+	var temp reflect.Value
+	for temp = v; temp.Kind() == reflect.Ptr; temp = temp.Elem() {
+		t = temp.Type()
 	}
-	return false
+
+	n := reflect.Zero(t)
+
+	return temp.Interface() == n.Interface()
 }
 
 // GetTableFromType ...
@@ -166,7 +160,6 @@ func querySelection(rQuery reflect.Value) (query string, values []interface{}, e
 
 // prepareQuery ...
 func prepareQuery(table string, rQuery reflect.Value, orderBy []string) (query string, vals []interface{}, err error) {
-
 	rType := rQuery.Type()
 	vals = make([]interface{}, 0)
 	selectQ := "SELECT "
