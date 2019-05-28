@@ -1,9 +1,9 @@
 .PHONY: run
 
-DBPATH=gitlab.stergianis.ca/michael/herald/db
+DBPATH=gitlab.stergianis.ca/michael/warbler/db
 
 run: compile
-	./herald
+	./warbler
 
 compile-db:
 	go build ${DBPATH}
@@ -13,5 +13,5 @@ compile: main.go routes.go routes_test.go compile-db
 	go build -v
 
 test:
-	go test -coverprofile=db/coverage.out gitlab.stergianis.ca/michael/herald/db
+	go test -coverprofile=db/coverage.out gitlab.stergianis.ca/michael/warbler/db
 	go test -coverprofile=coverage.out

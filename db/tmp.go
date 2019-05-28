@@ -235,7 +235,7 @@ func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args 
 
 // GetUniqueItem ...
 // Returns a unique item from the database. Requires an id.
-func (hdb *HeraldDB) GetUniqueItem(query Queryable) (err error) {
+func (wdb *WarblerDB) GetUniqueItem(query Queryable) (err error) {
 	table, ok := GetTableFromType(query)
 
 	if !ok {
@@ -250,7 +250,7 @@ func (hdb *HeraldDB) GetUniqueItem(query Queryable) (err error) {
 	// current issue is that a song has no genre, and we are trying to
 	// write <nil> into an int64 space
 	// https://stackoverflow.com/questions/28642838/how-do-i-handle-nil-return-values-from-database
-	err = hdb.QueryRow(q, a...).Scan(destArr...)
+	err = wdb.QueryRow(q, a...).Scan(destArr...)
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func (hdb *HeraldDB) GetUniqueItem(query Queryable) (err error) {
 // the provided tag conversion functions to convert from json or
 // edn. If you pass an empty array it will be ignored. Otherwise it
 // will pass the column names to the sql service.
-func (hdb *HeraldDB) GetItem(queryType interface{}, orderBy []string) ([]interface{}, error) {
+func (wdb *WarblerDB) GetItem(queryType interface{}, orderBy []string) ([]interface{}, error) {
 
 	table, ok := GetTableFromType(queryType)
 	if !ok {
@@ -281,7 +281,7 @@ func (hdb *HeraldDB) GetItem(queryType interface{}, orderBy []string) ([]interfa
 
 	query, vals, err := prepareQuery(table, rQuery, orderBy)
 
-	rows, err := hdb.Query(query, vals...)
+	rows, err := wdb.Query(query, vals...)
 	if err != nil {
 		return nil, err
 	}
@@ -306,11 +306,11 @@ func (hdb *HeraldDB) GetItem(queryType interface{}, orderBy []string) ([]interfa
 // which case it will return nothing. Otherwise it must be a valid
 // interfaceable field for the query type and it will be placed into
 // that query and returned.
-func (hdb *HeraldDB) addItem(query interface{}, returning []string) (interface{}, error) {
+func (wdb *WarblerDB) addItem(query interface{}, returning []string) (interface{}, error) {
 	var err error
 
 	// check for existence
-	results, err := hdb.GetItem(query, []string{})
+	results, err := wdb.GetItem(query, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +377,7 @@ func (hdb *HeraldDB) addItem(query interface{}, returning []string) (interface{}
 	valueQ += ")"
 
 	q := insertQ + valueQ + returningQ
-	row := hdb.QueryRow(q, insertVals...)
+	row := wdb.QueryRow(q, insertVals...)
 
 	if len(returnVal) > 0 {
 		err = row.Scan(returnVal...)

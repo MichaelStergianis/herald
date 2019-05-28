@@ -10,18 +10,16 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	"github.com/lib/pq"
 )
 
 var (
-	hdb       *HeraldDB
+	wdb       *WarblerDB
 	prepareDB func()
 )
 
 const (
 	testLibName = "Test"
-	dbName      = "herald_test"
+	dbName      = "warbler_test"
 	testSongLoc = "Simpsons/Thermo/"
 	testSong    = "Simpsons/Thermo/01 Obey.mp3"
 )
@@ -51,18 +49,18 @@ func fmtTestLib() string {
 func prepareTestLibrary() {
 	fsPath := fmtTestLib()
 
-	err := hdb.AddLibrary(testLibName, fsPath)
+	err := wdb.AddLibrary(testLibName, fsPath)
 	check(err)
 }
 
 func TestMain(m *testing.M) {
 	var err error
-	hdb, err = Open("dbname=" + dbName + " user=herald sslmode=disable")
+	wdb, err = Open("dbname=" + dbName + " user=warbler sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	prepareDB, err = PrepareTestDatabase(hdb, "fixtures")
+	prepareDB, err = PrepareTestDatabase(wdb, "fixtures")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,7 +73,7 @@ func TestCountTable(t *testing.T) {
 	prepareDB()
 
 	// positive case
-	count, err := hdb.CountTable("music.artists")
+	count, err := wdb.CountTable("music.artists")
 
 	if err != nil {
 		t.Error(err)
@@ -86,7 +84,7 @@ func TestCountTable(t *testing.T) {
 	}
 
 	// negative case
-	count, err = hdb.CountTable("music.non-existant")
+	count, err = wdb.CountTable("music.non-existant")
 
 	if err == nil {
 		t.Fail()
@@ -98,12 +96,12 @@ func TestAddLibrary(t *testing.T) {
 	prepareDB()
 	expected := Library{Name: "MusicalTest", Path: "/h/tt/MusicalTest/"}
 
-	err := hdb.AddLibrary(expected.Name, expected.Path)
+	err := wdb.AddLibrary(expected.Name, expected.Path)
 	if err != nil {
 		t.Error(err)
 	}
 
-	row := hdb.QueryRow("SELECT libraries.name, libraries.fs_path FROM music.libraries WHERE (libraries.name = $1)",
+	row := wdb.QueryRow("SELECT libraries.name, libraries.fs_path FROM music.libraries WHERE (libraries.name = $1)",
 		expected.Name)
 
 	var result Library
@@ -118,7 +116,7 @@ func TestAddLibrary(t *testing.T) {
 // TestAddLibraryNoAbs ...
 func TestAddLibraryNoAbs(t *testing.T) {
 	prepareDB()
-	err := hdb.AddLibrary("NoAbs", "Music/")
+	err := wdb.AddLibrary("NoAbs", "Music/")
 
 	if err != ErrNotAbs {
 		t.Error("did not get absolute path error")
@@ -139,7 +137,7 @@ func TestGetLibraries(t *testing.T) {
 		},
 	}
 
-	results, err := hdb.GetLibraries()
+	results, err := wdb.GetLibraries()
 	if err != nil {
 		t.Error(err)
 	}
@@ -160,7 +158,7 @@ func TestSongInLibrary(t *testing.T) {
 		err   error
 	)
 
-	libs, err := hdb.GetLibraries()
+	libs, err := wdb.GetLibraries()
 	if err != nil {
 		t.Error(err)
 	}
@@ -170,7 +168,7 @@ func TestSongInLibrary(t *testing.T) {
 		Path: "/home/tests/MyMusic/Iron Maiden/Killers/01 The Ides of March.mp3",
 	}
 
-	inLib, err = hdb.songInLibrary(song, libs["My Music"])
+	inLib, err = wdb.songInLibrary(song, libs["My Music"])
 
 	if err != nil {
 		t.Error(err)
@@ -190,7 +188,7 @@ func TestSongNotInLibrary(t *testing.T) {
 		err   error
 	)
 
-	libs, err := hdb.GetLibraries()
+	libs, err := wdb.GetLibraries()
 	if err != nil {
 		t.Error(err)
 	}
@@ -199,7 +197,7 @@ func TestSongNotInLibrary(t *testing.T) {
 		Path: "Iron Maiden/Killers/02 Wrathchild.mp3",
 	}
 
-	inLib, err = hdb.songInLibrary(song, libs["My Music"])
+	inLib, err = wdb.songInLibrary(song, libs["My Music"])
 
 	if err != nil {
 		t.Error(err)
@@ -245,14 +243,14 @@ func TestProcessMedia(t *testing.T) {
 	prepareDB()
 	prepareTestLibrary()
 
-	libs, err := hdb.GetLibraries()
+	libs, err := wdb.GetLibraries()
 	if err != nil {
 		t.Error(err)
 	}
 
 	ts := path.Join(testLib, testSong)
 
-	err = hdb.processMedia(ts, libs[testLibName])
+	err = wdb.processMedia(ts, libs[testLibName])
 	if err != nil {
 		t.Error(err)
 	}
@@ -263,17 +261,17 @@ func TestScanLibrary(t *testing.T) {
 	prepareDB()
 	prepareTestLibrary()
 
-	libs, err := hdb.GetLibraries()
+	libs, err := wdb.GetLibraries()
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = hdb.ScanLibrary(libs[testLibName])
+	err = wdb.ScanLibrary(libs[testLibName])
 	if err != nil {
 		t.Error(err)
 	}
 
-	// songs, err := hdb.GetSongsInLibrary(libs[testLibName])
+	// songs, err := wdb.GetSongsInLibrary(libs[testLibName])
 	// if err != nil {
 	// 	t.Error(err)
 	// }
@@ -350,7 +348,7 @@ func TestGetUniqueItem(t *testing.T) {
 		Name: "BADBADNOTGOOD",
 	}
 
-	err := hdb.GetUniqueItem(query)
+	err := wdb.GetUniqueItem(query)
 	if err != nil {
 		t.Error(err)
 	}
@@ -450,7 +448,7 @@ func TestGetItem(t *testing.T) {
 		if err != nil {
 			t.Errorf("error in tag conversion, test case: %d: %v\n", testCase, err)
 		}
-		results, err := hdb.GetItem(test.query, convTags)
+		results, err := wdb.GetItem(test.query, convTags)
 
 		if err != nil {
 			t.Error(err)
@@ -467,6 +465,8 @@ func TestGetItem(t *testing.T) {
 
 // TestAddItem ...
 func TestAddItem(t *testing.T) {
+	prepareDB()
+
 	testCases := [...]struct {
 		query     interface{}
 		returning []string
@@ -512,43 +512,26 @@ func TestAddItem(t *testing.T) {
 			&Song{Artist: NewNullString("BADBADNOTGOOD")},
 			[]string{"id"},
 			&Song{Artist: NewNullString("BADBADNOTGOOD")},
-			&pq.Error{Severity: "ERROR", Code: "23502",
-				Message: "null value in column \"fs_path\" violates not-null constraint",
-				Detail: "Failing row contains (10003, null, null, null, " +
-					"null, null, null, null, null, null, null, BADBADNOTGOOD).",
-				Hint: "", Position: "", InternalPosition: "", InternalQuery: "",
-				Where: "", Schema: "music", Table: "songs", Column: "fs_path",
-				DataTypeName: "", Constraint: "", File: "execMain.c", Line: "2042", Routine: "ExecConstraints"},
+			ErrNonUnique{&Song{Artist: NewNullString("BADBADNOTGOOD")}},
 		},
 
 		{
 			&Song{Path: "/", Title: "test", Size: 444, Duration: 4445,
 				Artist: NewNullString("BADBADNOTGOOD")},
 			[]string{"id"},
-			&Song{ID: 10004, Path: "/", Title: "test", Size: 444, Duration: 4445,
+			&Song{ID: 10003, Path: "/", Title: "test", Size: 444, Duration: 4445,
 				Artist: NewNullString("BADBADNOTGOOD")},
 			nil,
 		},
 	}
 
 	for testCase, test := range testCases {
-		q, err := hdb.addItem(test.query, test.returning)
-		fmt.Printf("testCase = %v\n", testCase)
+		q, err := wdb.addItem(test.query, test.returning)
 
-		fmt.Printf("%T %v\n", q, q)
-		fmt.Printf("%T %v\n\n", test.query, test.query)
+		fmt.Printf("%#v\n", err)
+		fmt.Printf("%#v\n", test.expErr)
 
-		// test case 4 (index 3) is a special case, returns a pointer to an
-		// error struct, so equality testing is difficult
-		var secondaryErrCheck = true
-		if _, ok := test.expErr.(*pq.Error); ok {
-			secondaryErrCheck = false
-			if *err.(*pq.Error) != *test.expErr.(*pq.Error) {
-				t.Errorf("test case %d failed: %v\n", testCase, err)
-			}
-		}
-
-		if err != test.expErr && secondaryErrCheck {
+		if err != test.expErr {
 			t.Errorf("test case %d failed: %v\n", testCase, err)
 		}
 
@@ -557,26 +540,6 @@ func TestAddItem(t *testing.T) {
 		rA := reflect.ValueOf(test.answer)
 		if rQ.Elem().Interface() != rA.Elem().Interface() {
 			t.Errorf("test case %d failed:\n\texpected: %v\n\tresult:   %v\n", testCase, test.answer, q)
-		}
-	}
-}
-
-// TestExtra ...
-func TestExtra(t *testing.T) {
-	prepareDB()
-
-	for _, col := range []interface{}{&Album{}, &Artist{}, &Song{}, &Library{}} {
-		fmt.Printf("\n%v\n", reflect.TypeOf(col))
-
-		cols, err := hdb.GetItem(col, []string{"id"})
-
-		if err != nil {
-			t.Error(err)
-		}
-
-		for i, c := range cols {
-			fmt.Printf("\t%d %#v\n", i, c)
-
 		}
 	}
 }

@@ -1,6 +1,6 @@
 // routes.go
 //
-// This file describes the routes that the server supports. Herald
+// This file describes the routes that the server supports. Warbler
 // currently supports two data formats for rest communication, json
 // and edn.
 //
@@ -18,7 +18,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	heraldDB "gitlab.stergianis.ca/michael/herald/db"
+	warblerDB "gitlab.stergianis.ca/michael/warbler/db"
 	"olympos.io/encoding/edn"
 )
 
@@ -26,7 +26,7 @@ type encFunc func(interface{}) ([]byte, error)
 
 type record struct {
 	url   string
-	query heraldDB.Queryable
+	query warblerDB.Queryable
 }
 
 type encoder struct {
@@ -58,12 +58,12 @@ func (serv *server) addRoutes() *server {
 	}
 
 	records := []record{
-		{"/library", &heraldDB.Library{}},
-		{"/artist", &heraldDB.Artist{}},
-		{"/album", &heraldDB.Album{}},
-		{"/genre", &heraldDB.Genre{}},
-		{"/song", &heraldDB.Song{}},
-		{"/image", &heraldDB.Image{}},
+		{"/library", &warblerDB.Library{}},
+		{"/artist", &warblerDB.Artist{}},
+		{"/album", &warblerDB.Album{}},
+		{"/genre", &warblerDB.Genre{}},
+		{"/song", &warblerDB.Song{}},
+		{"/image", &warblerDB.Image{}},
 	}
 
 	for _, enc := range encoders {
@@ -86,9 +86,9 @@ func (serv *server) addRoutes() *server {
 
 // NewUniqueQueryHandler ...
 // Expects a database object, a table name, and a type to use.
-func (serv *server) NewUniqueQueryHandler(enc encoder, queryType heraldDB.Queryable) http.HandlerFunc {
+func (serv *server) NewUniqueQueryHandler(enc encoder, queryType warblerDB.Queryable) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		query := heraldDB.NewFromQueryable(queryType)
+		query := warblerDB.NewFromQueryable(queryType)
 
 		params := mux.Vars(r)
 
@@ -126,16 +126,16 @@ func (serv *server) NewUniqueQueryHandler(enc encoder, queryType heraldDB.Querya
 // orderby - Specifies the field by which to order the data, and is optional.
 func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.HandlerFunc {
 	const orderField = "orderby"
-	validFields, err := heraldDB.ValidFields(enc.name, queryType)
+	validFields, err := warblerDB.ValidFields(enc.name, queryType)
 	if err != nil {
 		log.Panicln("Error creating new query handler:", err)
 	}
 	validFields[orderField] = struct{}{}
 
-	converter := heraldDB.NewTagConverter(queryType, enc.name, "sql")
+	converter := warblerDB.NewTagConverter(queryType, enc.name, "sql")
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		query := heraldDB.NewFromInterface(queryType)
+		query := warblerDB.NewFromInterface(queryType)
 		data, ok := r.URL.Query()["data"]
 		// if data is not given, return all articles matching that data type
 		if !ok {
@@ -154,7 +154,7 @@ func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.Han
 				return
 			}
 
-			convTags, err := heraldDB.ConvertTags(orderBy, converter)
+			convTags, err := warblerDB.ConvertTags(orderBy, converter)
 			if err != nil {
 				badRequestErr(w, err)
 				return

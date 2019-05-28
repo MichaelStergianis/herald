@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	heraldDB "gitlab.stergianis.ca/michael/herald/db"
+	warblerDB "gitlab.stergianis.ca/michael/warbler/db"
 	"olympos.io/encoding/edn"
 )
 
@@ -21,21 +21,21 @@ var (
 )
 
 const (
-	dbName = "herald_test"
+	dbName = "warbler_test"
 )
 
 // TestMain ...
 func TestMain(m *testing.M) {
 	var err error
 
-	// use herald test server
-	serv, err = newServer("dbname=" + dbName + " user=herald sslmode=disable")
+	// use warbler test server
+	serv, err = newServer("dbname=" + dbName + " user=warbler sslmode=disable")
 	if err != nil {
 		log.Fatalln("cannot create connection to testing server", err)
 	}
 	serv.addRoutes()
 
-	prepareDB, err = heraldDB.PrepareTestDatabase(serv.hdb, "db/fixtures")
+	prepareDB, err = warblerDB.PrepareTestDatabase(serv.hdb, "db/fixtures")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,29 +51,29 @@ func TestNewUniqueQueryHandler(t *testing.T) {
 		{"edn", edn.Marshal, edn.Unmarshal},
 	}
 	records := [...]record{
-		{"library", &heraldDB.Library{ID: 1}},
-		{"genre", &heraldDB.Genre{ID: 1}},
-		{"artist", &heraldDB.Artist{ID: 1}},
-		{"album", &heraldDB.Album{ID: 1}},
-		{"song", &heraldDB.Song{ID: 1}},
-		{"image", &heraldDB.Image{ID: 1}},
+		{"library", &warblerDB.Library{ID: 1}},
+		{"genre", &warblerDB.Genre{ID: 1}},
+		{"artist", &warblerDB.Artist{ID: 1}},
+		{"album", &warblerDB.Album{ID: 1}},
+		{"song", &warblerDB.Song{ID: 1}},
+		{"image", &warblerDB.Image{ID: 1}},
 	}
 
-	answers := [...]heraldDB.Queryable{
-		&heraldDB.Library{ID: 1, Name: "Music"},
-		&heraldDB.Genre{ID: 1, Name: "Jazz"},
-		&heraldDB.Artist{ID: 1, Name: "BADBADNOTGOOD"},
-		&heraldDB.Album{
-			ID: 1, Artist: heraldDB.NewNullInt64(1), Year: heraldDB.NewNullInt64(2011), NumTracks: heraldDB.NewNullInt64(20),
-			NumDisks: heraldDB.NewNullInt64(1), Title: "III", Duration: heraldDB.NewNullFloat64(1688),
+	answers := [...]warblerDB.Queryable{
+		&warblerDB.Library{ID: 1, Name: "Music"},
+		&warblerDB.Genre{ID: 1, Name: "Jazz"},
+		&warblerDB.Artist{ID: 1, Name: "BADBADNOTGOOD"},
+		&warblerDB.Album{
+			ID: 1, Artist: warblerDB.NewNullInt64(1), Year: warblerDB.NewNullInt64(2011), NumTracks: warblerDB.NewNullInt64(20),
+			NumDisks: warblerDB.NewNullInt64(1), Title: "III", Duration: warblerDB.NewNullFloat64(1688),
 		},
-		&heraldDB.Song{
-			ID: 1, Album: heraldDB.NewNullInt64(1), Genre: heraldDB.NewNullInt64(1), Title: "In the Night",
-			Track: heraldDB.NewNullInt64(1), NumTracks: heraldDB.NewNullInt64(20),
-			Disk: heraldDB.NewNullInt64(1), NumDisks: heraldDB.NewNullInt64(1),
-			Size: 204192, Duration: 1993, Artist: heraldDB.NewNullString("BADBADNOTGOOD"),
+		&warblerDB.Song{
+			ID: 1, Album: warblerDB.NewNullInt64(1), Genre: warblerDB.NewNullInt64(1), Title: "In the Night",
+			Track: warblerDB.NewNullInt64(1), NumTracks: warblerDB.NewNullInt64(20),
+			Disk: warblerDB.NewNullInt64(1), NumDisks: warblerDB.NewNullInt64(1),
+			Size: 204192, Duration: 1993, Artist: warblerDB.NewNullString("BADBADNOTGOOD"),
 		},
-		&heraldDB.Image{ID: 1},
+		&warblerDB.Image{ID: 1},
 	}
 
 	// test cases

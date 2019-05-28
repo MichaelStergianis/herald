@@ -14,16 +14,16 @@ import (
 	"regexp"
 	"strconv"
 
-	// pq is used behind the scenes, but never explicitly used
 	"github.com/dhowden/tag"
+	// pq is used behind the scenes, but never explicitly used
 	_ "github.com/lib/pq"
 
 	ft "gopkg.in/h2non/filetype.v1"
 )
 
-// HeraldDB ...
-// A type for interfacing with the herald db
-type HeraldDB struct {
+// WarblerDB ...
+// A type for interfacing with the warbler db
+type WarblerDB struct {
 	*sql.DB
 }
 
@@ -35,17 +35,17 @@ func check(e error) {
 }
 
 // Open ...
-// Creates the connection to the db as a HeraldDB pointer.
-func Open(connStr string) (*HeraldDB, error) {
+// Creates the connection to the db as a WarblerDB pointer.
+func Open(connStr string) (*WarblerDB, error) {
 	sqldb, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
 	}
 
-	hdb := &HeraldDB{
+	wdb := &WarblerDB{
 		sqldb,
 	}
-	return hdb, nil
+	return wdb, nil
 }
 
 // duration ...
@@ -69,7 +69,7 @@ func duration(song Song) (d float64, err error) {
 
 	matches := re.FindAllStringSubmatch(string(stderr.Bytes()), -1)
 	if matches == nil {
-		return d, errors.New("hdb: no duration for empty file")
+		return d, errors.New("wdb: no duration for empty file")
 	}
 
 	timings := make([]float64, 4)
@@ -89,9 +89,9 @@ func duration(song Song) (d float64, err error) {
 }
 
 // Close ...
-// Closes an hdb.
-func (hdb *HeraldDB) Close() {
-	hdb.DB.Close()
+// Closes an wdb.
+func (wdb *WarblerDB) Close() {
+	wdb.DB.Close()
 }
 
 // GetValidTable ...
@@ -123,12 +123,12 @@ func GetValidTable(table string) bool {
 
 // CountTable ...
 // Gets the count of a table in our database.
-func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
+func (wdb *WarblerDB) CountTable(table string) (count int, err error) {
 	if ok := GetValidTable(table); !ok {
 		return 0, ErrInvalidTable
 	}
 
-	row := hdb.QueryRow(`SELECT COUNT(1) AS count FROM ` + table)
+	row := wdb.QueryRow(`SELECT COUNT(1) AS count FROM ` + table)
 
 	err = row.Scan(&count)
 	if err != nil {
@@ -142,12 +142,12 @@ func (hdb *HeraldDB) CountTable(table string) (count int, err error) {
 // Creates the library of a given name and path. Requries an absolute
 // path. You should not make assumptions about from which directory
 // this server will be run.
-func (hdb *HeraldDB) AddLibrary(name string, fsPath string) (err error) {
+func (wdb *WarblerDB) AddLibrary(name string, fsPath string) (err error) {
 	if !path.IsAbs(fsPath) {
 		return ErrNotAbs
 	}
 
-	stmt, err := hdb.Prepare("INSERT INTO music.libraries (name, fs_path) VALUES ($1, $2);")
+	stmt, err := wdb.Prepare("INSERT INTO music.libraries (name, fs_path) VALUES ($1, $2);")
 	if err != nil {
 		return err
 	}
@@ -162,13 +162,13 @@ func (hdb *HeraldDB) AddLibrary(name string, fsPath string) (err error) {
 }
 
 // GetLibraries ...
-func (hdb *HeraldDB) GetLibraries() (libs map[string]Library, err error) {
+func (wdb *WarblerDB) GetLibraries() (libs map[string]Library, err error) {
 	tableName := "music.libraries"
 
-	count, err := hdb.CountTable(tableName)
+	count, err := wdb.CountTable(tableName)
 
 	// query
-	rows, err := hdb.Query("SELECT id, name, fs_path from " + tableName + " ORDER BY id;")
+	rows, err := wdb.Query("SELECT id, name, fs_path from " + tableName + " ORDER BY id;")
 	defer rows.Close()
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func fileType(file string) int {
 
 // processMedia ...
 // Processes a file to add necessary information to the database.
-func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
+func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 	f, err := os.Open(fsPath)
 	if err != nil {
 		return err
@@ -227,7 +227,7 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 	}
 
 	// Check to see if the song is in the database
-	inLib, err := hdb.songInLibrary(*s, lib)
+	inLib, err := wdb.songInLibrary(*s, lib)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		Name: metadata.Genre(),
 	}
 	if genre.Name != "" {
-		_, err = hdb.addItem(genre, []string{"id"})
+		_, err = wdb.addItem(genre, []string{"id"})
 		if err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		Name: metadata.AlbumArtist(),
 	}
 	if artist.Name != "" {
-		_, err = hdb.addItem(artist, []string{"id"})
+		_, err = wdb.addItem(artist, []string{"id"})
 		if err != nil {
 			return err
 		}
@@ -289,7 +289,7 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		Title:     metadata.Album(),
 	}
 
-	_, err = hdb.addItem(album, []string{"id"})
+	_, err = wdb.addItem(album, []string{"id"})
 	if err != nil {
 		return err
 	}
@@ -306,12 +306,12 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 		}
 	}
 
-	_, err = hdb.addItem(s, []string{"id"})
+	_, err = wdb.addItem(s, []string{"id"})
 	if err != nil {
 		return err
 	}
 
-	err = hdb.addSongToLibrary(*s, lib)
+	err = wdb.addSongToLibrary(*s, lib)
 	if err != nil {
 		return err
 	}
@@ -321,19 +321,19 @@ func (hdb *HeraldDB) processMedia(fsPath string, lib Library) (err error) {
 
 // songInLibrary ...
 // Checks to see if a song is in the given library.
-func (hdb *HeraldDB) songInLibrary(song Song, library Library) (inLib bool, err error) {
+func (wdb *WarblerDB) songInLibrary(song Song, library Library) (inLib bool, err error) {
 	// get songs id based on path
 	if song.Path == "" {
 		return false, ErrNonUnique{song}
 	}
-	err = hdb.QueryRow("SELECT id FROM music.songs where fs_path = $1", song.Path).Scan(&song.ID)
+	err = wdb.QueryRow("SELECT id FROM music.songs where fs_path = $1", song.Path).Scan(&song.ID)
 	if err != nil && !(err == sql.ErrNoRows) {
 		return false, err
 	}
 
 	query := "SELECT COUNT(1) FROM music.songs_in_library where song_id = $1 AND library_id = $2;"
 
-	row := hdb.QueryRow(query, song.ID, library.ID)
+	row := wdb.QueryRow(query, song.ID, library.ID)
 
 	var numInLib int
 	err = row.Scan(&numInLib)
@@ -355,19 +355,19 @@ func (hdb *HeraldDB) songInLibrary(song Song, library Library) (inLib bool, err 
 // TODO GetTypeInLibrary ...
 
 // GetSongsInLibrary ...
-func (hdb *HeraldDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
+func (wdb *WarblerDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
 	if lib.ID == 0 {
-		return nil, errors.New("hdb: provided library must have an id")
+		return nil, errors.New("wdb: provided library must have an id")
 	}
 
 	var size int
-	err = hdb.QueryRow("SELECT COUNT(1) FROM music.songs_in_library WHERE library_id = $1", lib.ID).Scan(&size)
+	err = wdb.QueryRow("SELECT COUNT(1) FROM music.songs_in_library WHERE library_id = $1", lib.ID).Scan(&size)
 	if err != nil {
 		return nil, err
 	}
 	songs = make([]Song, size)
 
-	rows, err := hdb.Query("SELECT song_id FROM music.songs_in_library WHERE library_id = $1 ORDER BY song_id", lib.ID)
+	rows, err := wdb.Query("SELECT song_id FROM music.songs_in_library WHERE library_id = $1 ORDER BY song_id", lib.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func (hdb *HeraldDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
 			return nil, err
 		}
 
-		err := hdb.GetUniqueItem(&s)
+		err := wdb.GetUniqueItem(&s)
 		if err != nil {
 			return nil, err
 		}
@@ -389,8 +389,8 @@ func (hdb *HeraldDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
 }
 
 // addSongToLibrary ...
-func (hdb *HeraldDB) addSongToLibrary(song Song, lib Library) error {
-	sInL, err := hdb.songInLibrary(song, lib)
+func (wdb *WarblerDB) addSongToLibrary(song Song, lib Library) error {
+	sInL, err := wdb.songInLibrary(song, lib)
 	if err != nil {
 		return err
 	}
@@ -400,7 +400,7 @@ func (hdb *HeraldDB) addSongToLibrary(song Song, lib Library) error {
 	}
 
 	query := "INSERT INTO music.songs_in_library (song_id, library_id) VALUES ($1, $2)"
-	stmt, err := hdb.Prepare(query)
+	stmt, err := wdb.Prepare(query)
 	if err != nil {
 		return err
 	}
@@ -414,13 +414,13 @@ func (hdb *HeraldDB) addSongToLibrary(song Song, lib Library) error {
 }
 
 // addImageFile ...
-func (hdb *HeraldDB) addImageFile(fsPath string) {
+func (wdb *WarblerDB) addImageFile(fsPath string) {
 
 }
 
 // ScanLibrary ...
 // Scans the library. If some media is already in the library, it will not add it again.
-func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
+func (wdb *WarblerDB) ScanLibrary(lib Library) (err error) {
 	walkFn := func(fsPath string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("Encountered the following error while traversing %q: %v", fsPath, err)
@@ -432,13 +432,13 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
 		switch fileType(fsPath) {
 		case musicType:
 			{
-				err = hdb.processMedia(fsPath, lib)
+				err = wdb.processMedia(fsPath, lib)
 				if err != nil {
 					log.Printf("%v", err)
 				}
 			}
 		case imageType:
-			hdb.addImageFile(fsPath)
+			wdb.addImageFile(fsPath)
 		}
 		return err
 	}
@@ -453,12 +453,12 @@ func (hdb *HeraldDB) ScanLibrary(lib Library) (err error) {
 
 // ScanLibraries ...
 // Scans all available libraries
-func (hdb *HeraldDB) ScanLibraries() {
-	libs, err := hdb.GetLibraries()
+func (wdb *WarblerDB) ScanLibraries() {
+	libs, err := wdb.GetLibraries()
 
 	check(err)
 
 	for _, lib := range libs {
-		hdb.ScanLibrary(lib)
+		wdb.ScanLibrary(lib)
 	}
 }

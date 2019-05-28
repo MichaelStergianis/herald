@@ -10,20 +10,20 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
-	heraldDB "gitlab.stergianis.ca/michael/herald/db"
+	warblerDB "gitlab.stergianis.ca/michael/warbler/db"
 )
 
 const resourcesLoc string = "frontend/resources/public/"
 
 type server struct {
-	hdb    *heraldDB.HeraldDB
+	hdb    *warblerDB.WarblerDB
 	router *mux.Router
 }
 
 // newServer ...
 func newServer(connStr string) (serv *server, err error) {
 	serv = &server{}
-	serv.hdb, err = heraldDB.Open(connStr)
+	serv.hdb, err = warblerDB.Open(connStr)
 	if err != nil {
 		return &server{}, err
 	}
@@ -33,7 +33,7 @@ func newServer(connStr string) (serv *server, err error) {
 }
 
 // serveMusic ...
-func serveMusic(hdb *heraldDB.HeraldDB) func(w http.ResponseWriter, r *http.Request) {
+func serveMusic(hdb *warblerDB.WarblerDB) func(w http.ResponseWriter, r *http.Request) {
 	f := func(w http.ResponseWriter, r *http.Request) {
 		args := r.URL.Query()
 		// error checking on args is somewhat important
@@ -62,7 +62,7 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	serv, err := newServer("dbname=herald user=herald sslmode=disable")
+	serv, err := newServer("dbname=warbler user=warbler sslmode=disable")
 	check(err)
 	defer serv.hdb.Close()
 

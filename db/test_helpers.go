@@ -7,10 +7,10 @@ import (
 )
 
 // PrepareTestDatabase ...
-func PrepareTestDatabase(hdb *HeraldDB, fixturesDir string) (func(), error) {
+func PrepareTestDatabase(wdb *WarblerDB, fixturesDir string) (func(), error) {
 	var err error
 
-	fixtures, err := testfixtures.NewFolder(hdb.DB, &testfixtures.PostgreSQL{UseAlterConstraint: true}, fixturesDir)
+	fixtures, err := testfixtures.NewFolder(wdb.DB, &testfixtures.PostgreSQL{UseAlterConstraint: true}, fixturesDir)
 	if err != nil {
 		return nil, err
 	}
