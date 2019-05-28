@@ -143,7 +143,7 @@
        {:class (compose
                 (s/pad-in-start 10)
                 (s/navbar-brand))
-        :on-click #((toggle-sidebar-visibility!) (set-active! :random))} "herald"]
+        :on-click #((toggle-sidebar-visibility!) (set-active! :random))} "Warbler"]
       ;; options
       [options-toggle]]]))
 
