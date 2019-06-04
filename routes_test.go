@@ -89,12 +89,12 @@ func TestNewUniqueQueryHandler(t *testing.T) {
 			serv.router.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusOK {
-				t.Errorf("handler for %s returned status code %v", rec.url, rr.Code)
+				t.Errorf("error during test case %d handler for %s returned status code %v", idx, rec.url, rr.Code)
 			}
 
 			err = enc.dec(rr.Body.Bytes(), rec.query)
 			if err != nil {
-				t.Errorf("encountered error decoding response: %v", err)
+				t.Errorf("encountered error during test case %d decoding response: %v", idx, err)
 			}
 
 			// reflection required to test that they work
@@ -153,12 +153,12 @@ func TestNewQueryHandler(t *testing.T) {
 		{ednE, http.StatusBadRequest, "/edn/songs/", []string{`4`}},
 	}
 	answers := []string{
-		`[[{:id 1 :album 1 :genre 1 :title"In the Night":track 1 :num-tracks 20 :disk 1 :num-disks 1 :size 204192 :duration 1993.0 :artist"BADBADNOTGOOD"}{:id 5 :album 1 :genre 1 :title"Triangle":track 2 :num-tracks 20 :disk 1 :num-disks 1 :size 204299 :duration 1999.0 :artist"BADBADNOTGOOD"}]]`,
-		`[[{:id 3 :album 3 :genre 3 :title"The Ides of March":track 1 :num-tracks 8 :disk 1 :num-disks 1 :size 2109 :duration 210.0 :artist"Iron Maiden"}][{:id 4 :album 4 :genre 4 :title"Hangar 18":track 1 :num-tracks 13 :disk 1 :num-disks 1 :size 99948 :duration 9994.0 :artist"Megadeth"}]]`,
-		`[[{"id":1,"artist":1,"year":2011,"num-tracks":20,"num-disks":1,"title":"III","duration":1688},{"id":2,"artist":2,"year":2001,"num-tracks":10,"num-disks":1,"title":"Sour Soul","duration":1800},{"id":3,"artist":3,"year":1980,"num-tracks":8,"num-disks":1,"title":"Killers","duration":15440},{"id":4,"artist":4,"year":1985,"num-tracks":13,"num-disks":1,"title":"Rust in Peace","duration":1756},{"id":5,"artist":1,"year":2012,"num-tracks":19,"num-disks":1,"title":"IV","duration":1688}]]`,
+		`[[{:id 1 :album 1 :genre 1 :title"In the Night":size 204192 :duration 1993.0 :track 1 :num-tracks 20 :disk 1 :num-disks 1 :artist "BADBADNOTGOOD"}{:id 5 :album 1 :genre 1 :title"Triangle":size 204299 :duration 1999.0 :track 2 :num-tracks 20 :disk 1 :num-disks 1 :artist "BADBADNOTGOOD"}{:id 6 :album 1 :genre 1 :title"Something":size 91841 :duration 9381.0 :track nil :num-tracks nil :disk nil :num-disks nil :artist "BADBADNOTGOOD"}]]`,
+		`[[{:id 3 :album 3 :genre 3 :title"The Ides of March":size 2109 :duration 210.0 :track 1 :num-tracks 8 :disk 1 :num-disks 1 :artist "Iron Maiden"}][{:id 4 :album 4 :genre 4 :title"Hangar 18":size 99948 :duration 9994.0 :track 1 :num-tracks 13 :disk 1 :num-disks 1 :artist "Megadeth"}]]`,
+		`[[{"id":1,"artist":1,"title":"III","year":2011,"num-tracks":20,"num-disks":1,"duration":1688},{"id":2,"artist":2,"title":"Sour Soul","year":2001,"num-tracks":10,"num-disks":1,"duration":1800},{"id":3,"artist":3,"title":"Killers","year":1980,"num-tracks":8,"num-disks":1,"duration":15440},{"id":4,"artist":4,"title":"Rust in Peace","year":1985,"num-tracks":13,"num-disks":1,"duration":1756},{"id":5,"artist":1,"title":"IV","year":2012,"num-tracks":19,"num-disks":1,"duration":1688}]]`,
 		`[[{:id 1 :name"BADBADNOTGOOD"}{:id 2 :name"BADBADNOTGOOD \u0026 Ghostface Killah"}{:id 3 :name"Iron Maiden"}{:id 4 :name"Megadeth"}]]`,
 		`[[{"id":1,"name":"BADBADNOTGOOD"},{"id":2,"name":"BADBADNOTGOOD \u0026 Ghostface Killah"},{"id":3,"name":"Iron Maiden"},{"id":4,"name":"Megadeth"}]]`,
-		`[[{"id":1,"artist":1,"year":2011,"num-tracks":20,"num-disks":1,"title":"III","duration":1688},{"id":2,"artist":2,"year":2001,"num-tracks":10,"num-disks":1,"title":"Sour Soul","duration":1800},{"id":3,"artist":3,"year":1980,"num-tracks":8,"num-disks":1,"title":"Killers","duration":15440},{"id":4,"artist":4,"year":1985,"num-tracks":13,"num-disks":1,"title":"Rust in Peace","duration":1756},{"id":5,"artist":1,"year":2012,"num-tracks":19,"num-disks":1,"title":"IV","duration":1688}]]`,
+		`[[{"id":1,"artist":1,"title":"III","year":2011,"num-tracks":20,"num-disks":1,"duration":1688},{"id":2,"artist":2,"title":"Sour Soul","year":2001,"num-tracks":10,"num-disks":1,"duration":1800},{"id":3,"artist":3,"title":"Killers","year":1980,"num-tracks":8,"num-disks":1,"duration":15440},{"id":4,"artist":4,"title":"Rust in Peace","year":1985,"num-tracks":13,"num-disks":1,"duration":1756},{"id":5,"artist":1,"title":"IV","year":2012,"num-tracks":19,"num-disks":1,"duration":1688}]]`,
 		"edn: cannot unmarshal int into Go value of type db.Song",
 	}
 

@@ -467,6 +467,11 @@ func TestGetItem(t *testing.T) {
 func TestAddItem(t *testing.T) {
 	prepareDB()
 
+	var (
+		thirdCaseArtist = &Song{Artist: NewNullString("BADBADNOTGOOD")}
+		thirdCaseErr    = ErrNonUnique{thirdCaseArtist}
+	)
+
 	testCases := [...]struct {
 		query     interface{}
 		returning []string
@@ -474,7 +479,7 @@ func TestAddItem(t *testing.T) {
 		expErr    error
 	}{
 		// no genre
-		{
+		{ // 0
 			&Song{
 				Album: NewNullInt64(1), Path: "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
 				Title: "Sax Stuff", Track: NewNullInt64(3), NumTracks: NewNullInt64(20),
@@ -489,10 +494,10 @@ func TestAddItem(t *testing.T) {
 			nil,
 		},
 		// add a genre, then use it
-		{
+		{ // 1
 			&Genre{Name: "Jazz Hop"}, []string{"id"}, &Genre{10001, "Jazz Hop"}, nil,
 		},
-		{
+		{ // 2
 			&Song{Album: NullInt64{}, Genre: NewNullInt64(10001),
 				Path: "/home/test/Music/BADBADNOTGOOD/III/05 TT.mp3", Title: "TT",
 				Track: NewNullInt64(5), NumTracks: NewNullInt64(20),
@@ -508,14 +513,14 @@ func TestAddItem(t *testing.T) {
 		},
 
 		// don't provide path for lookup
-		{
-			&Song{Artist: NewNullString("BADBADNOTGOOD")},
+		{ // 3
+			thirdCaseArtist,
 			[]string{"id"},
 			&Song{Artist: NewNullString("BADBADNOTGOOD")},
-			ErrNonUnique{&Song{Artist: NewNullString("BADBADNOTGOOD")}},
+			thirdCaseErr,
 		},
 
-		{
+		{ // 4
 			&Song{Path: "/", Title: "test", Size: 444, Duration: 4445,
 				Artist: NewNullString("BADBADNOTGOOD")},
 			[]string{"id"},
