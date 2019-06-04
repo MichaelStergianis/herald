@@ -256,7 +256,7 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		Name: metadata.Genre(),
 	}
 	if genre.Name != "" {
-		_, err = wdb.addItem(genre, []string{"id"})
+		_, err = wdb.Create(genre, []string{"id"})
 		if err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		Name: metadata.AlbumArtist(),
 	}
 	if artist.Name != "" {
-		_, err = wdb.addItem(artist, []string{"id"})
+		_, err = wdb.Create(artist, []string{"id"})
 		if err != nil {
 			return err
 		}
@@ -289,7 +289,7 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		Title:     metadata.Album(),
 	}
 
-	_, err = wdb.addItem(album, []string{"id"})
+	_, err = wdb.Create(album, []string{"id"})
 	if err != nil {
 		return err
 	}
@@ -306,7 +306,7 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		}
 	}
 
-	_, err = wdb.addItem(s, []string{"id"})
+	_, err = wdb.Create(s, []string{"id"})
 	if err != nil {
 		return err
 	}
@@ -378,7 +378,7 @@ func (wdb *WarblerDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
 			return nil, err
 		}
 
-		err := wdb.GetUniqueItem(&s)
+		err := wdb.ReadUnique(&s)
 		if err != nil {
 			return nil, err
 		}

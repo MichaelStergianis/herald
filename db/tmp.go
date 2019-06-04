@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
-
-	"github.com/lib/pq"
 )
 
 // NewFromQueryable ...
@@ -108,24 +105,6 @@ func prepareDest(rdest reflect.Value) (destArr []interface{}) {
 		}
 	}
 	return destArr
-}
-
-// ValueToScanner ...
-func ValueToScanner(val interface{}) (sql.Scanner, error) {
-	switch val.(type) {
-	case int, int8, int16, int32, int64:
-		return &sql.NullInt64{}, nil
-	case float32, float64:
-		return &sql.NullFloat64{}, nil
-	case string:
-		return &sql.NullString{}, nil
-	case bool:
-		return &sql.NullBool{}, nil
-	case time.Time:
-		return &pq.NullTime{}, nil
-	}
-
-	return nil, ErrInvalidScanner
 }
 
 // querySelection ...
@@ -233,9 +212,9 @@ func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args 
 	return query, args
 }
 
-// GetUniqueItem ...
+// ReadUnique ...
 // Returns a unique item from the database. Requires an id.
-func (wdb *WarblerDB) GetUniqueItem(query Queryable) (err error) {
+func (wdb *WarblerDB) ReadUnique(query Queryable) (err error) {
 	table, ok := GetTableFromType(query)
 
 	if !ok {
@@ -258,15 +237,15 @@ func (wdb *WarblerDB) GetUniqueItem(query Queryable) (err error) {
 	return nil
 }
 
-// GetItem ...
-// GetItem searches the database for an item matching the query type,
+// Read ...
+// Read searches the database for an item matching the query type,
 // using the queries fields.
 //
 // Order by is optional. You must provide the sql names, you can use
 // the provided tag conversion functions to convert from json or
 // edn. If you pass an empty array it will be ignored. Otherwise it
 // will pass the column names to the sql service.
-func (wdb *WarblerDB) GetItem(queryType interface{}, orderBy []string) ([]interface{}, error) {
+func (wdb *WarblerDB) Read(queryType interface{}, orderBy []string) ([]interface{}, error) {
 
 	table, ok := GetTableFromType(queryType)
 	if !ok {
@@ -301,16 +280,16 @@ func (wdb *WarblerDB) GetItem(queryType interface{}, orderBy []string) ([]interf
 	return results, nil
 }
 
-// addItem ...
+// Create ...
 // Adds an item to the database. Returning may be the empty string, in
 // which case it will return nothing. Otherwise it must be a valid
 // interfaceable field for the query type and it will be placed into
 // that query and returned.
-func (wdb *WarblerDB) addItem(query interface{}, returning []string) (interface{}, error) {
+func (wdb *WarblerDB) Create(query interface{}, returning []string) (interface{}, error) {
 	var err error
 
 	// check for existence
-	results, err := wdb.GetItem(query, []string{})
+	results, err := wdb.Read(query, []string{})
 	if err != nil {
 		return nil, err
 	}

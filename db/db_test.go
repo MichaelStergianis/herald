@@ -348,7 +348,7 @@ func TestGetUniqueItem(t *testing.T) {
 		Name: "BADBADNOTGOOD",
 	}
 
-	err := wdb.GetUniqueItem(query)
+	err := wdb.ReadUnique(query)
 	if err != nil {
 		t.Error(err)
 	}
@@ -448,7 +448,7 @@ func TestGetItem(t *testing.T) {
 		if err != nil {
 			t.Errorf("error in tag conversion, test case: %d: %v\n", testCase, err)
 		}
-		results, err := wdb.GetItem(test.query, convTags)
+		results, err := wdb.Read(test.query, convTags)
 
 		if err != nil {
 			t.Error(err)
@@ -526,10 +526,7 @@ func TestAddItem(t *testing.T) {
 	}
 
 	for testCase, test := range testCases {
-		q, err := wdb.addItem(test.query, test.returning)
-
-		fmt.Printf("%#v\n", err)
-		fmt.Printf("%#v\n", test.expErr)
+		q, err := wdb.Create(test.query, test.returning)
 
 		if err != test.expErr {
 			t.Errorf("test case %d failed: %v\n", testCase, err)

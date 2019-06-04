@@ -101,7 +101,7 @@ func (serv *server) NewUniqueQueryHandler(enc encoder, queryType warblerDB.Query
 		}
 
 		query.SetID(int64(id))
-		err = serv.hdb.GetUniqueItem(query)
+		err = serv.hdb.ReadUnique(query)
 		if err != nil {
 			badRequestErr(w, err)
 			return
@@ -160,7 +160,7 @@ func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.Han
 				return
 			}
 
-			result, err := serv.hdb.GetItem(query, convTags)
+			result, err := serv.hdb.Read(query, convTags)
 			if err != nil {
 				badRequestErr(w, err)
 				return
