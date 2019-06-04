@@ -258,6 +258,7 @@ func TestProcessMedia(t *testing.T) {
 
 // TestScanLibrary ...
 func TestScanLibrary(t *testing.T) {
+	var numSongsExpected = 1
 	prepareDB()
 	prepareTestLibrary()
 
@@ -271,16 +272,29 @@ func TestScanLibrary(t *testing.T) {
 		t.Error(err)
 	}
 
-	// songs, err := wdb.GetSongsInLibrary(libs[testLibName])
-	// if err != nil {
-	// 	t.Error(err)
-	// }
+	songs, err := wdb.GetSongsInLibrary(libs[testLibName])
+	if err != nil {
+		t.Error(err)
+	}
 
-	// fmt.Printf("%+v\n", songs)
+	if len(songs) != numSongsExpected {
+		t.Errorf("unexpected number of songs: %d", len(songs))
+	}
 
-	// for _, song := range songs {
-	// 	fmt.Printf("%+v\n", song)
-	// }
+	expectedSong := Song{ID: 10001,
+		Album: NullInt64{NullInt64: sql.NullInt64{Int64: 10001, Valid: true}},
+		Genre: NullInt64{NullInt64: sql.NullInt64{Int64: 0, Valid: false}},
+		Path:  path.Join(testLib, testSong), Title: "Obey", Size: 56417, Duration: 3.46,
+		Track:     NullInt64{NullInt64: sql.NullInt64{Int64: 1, Valid: true}},
+		NumTracks: NullInt64{NullInt64: sql.NullInt64{Int64: 1, Valid: true}},
+		Disk:      NullInt64{NullInt64: sql.NullInt64{Int64: 0, Valid: false}},
+		NumDisks:  NullInt64{NullInt64: sql.NullInt64{Int64: 0, Valid: false}},
+		Artist:    NullString{NullString: sql.NullString{String: "", Valid: false}}}
+
+	if songs[0] != expectedSong {
+		t.Errorf("unexpected song parsed\n\texpected: %v\n\tresult: %v\n", expectedSong, songs[0])
+	}
+
 }
 
 // TestQuerySelection ...
