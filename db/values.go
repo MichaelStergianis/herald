@@ -209,7 +209,7 @@ func NewNullString(s string) NullString {
 func (v NullString) MarshalEDN() ([]byte, error) {
 	response := ednNil
 	if v.Valid {
-		response = v.String
+		response = strconv.Quote(v.String)
 	}
 	return []byte(response), nil
 }
@@ -218,7 +218,7 @@ func (v NullString) MarshalEDN() ([]byte, error) {
 func (v NullString) MarshalJSON() ([]byte, error) {
 	response := jsonNil
 	if v.Valid {
-		response = v.String
+		response = strconv.Quote(v.String)
 	}
 	return []byte(response), nil
 }
