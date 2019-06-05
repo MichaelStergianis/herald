@@ -13,20 +13,23 @@
                  [reagent "0.8.1"]
                  [cljs-ajax "0.7.5"]]
 
+  :plugins [[lein-cljsbuild "1.1.7"]]
+
   :source-paths ["src"]
 
   :resource-paths ["resources" "target"]
 
   :target-paths ["resources/public/cljs-out" "resources/public/js"]
 
-  #_(:cljsbuild {:builds
+  :cljsbuild {:builds
               [{:id "dev"
                 :source-paths ["src"]
 
                 :compiler {:main frontend.core
                            :asset-path "js/compiled/out"
+                           :output-dir "resources/public/js/compiled/out/"
                            :output-to "resources/public/js/compiled/frontend.js"
-                           :output-dir "resources/public/js/compiled/out"
+                           :target-dir "resources/public/js/compiled/"
                            :source-map-timestamp true
                            ;; To console.log CLJS data-structures make sure you enable devtools in Chrome
                            ;; https://github.com/binaryage/cljs-devtools
@@ -37,9 +40,10 @@
                {:id "min"
                 :source-paths ["src"]
                 :compiler {:output-to "resources/public/js/compiled/frontend.js"
+                           :target-dir "resources/public/js/compiled/"
                            :main frontend.core
-                           :optimizations :none
-                           :pretty-print false}}]})
+                           :optimizations :advanced
+                           :pretty-print false}}]}
 
   ;; Setting up nREPL for Figwheel and ClojureScript dev
   ;; Please see:
