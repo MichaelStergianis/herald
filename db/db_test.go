@@ -542,10 +542,25 @@ func TestAddItem(t *testing.T) {
 				Artist: NewNullString("BADBADNOTGOOD")},
 			nil,
 		},
+
+		{ // 5
+			&Song{
+				Album: NewNullInt64(1), Path: "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
+				Title: "Sax Stuff", Track: NewNullInt64(3), NumTracks: NewNullInt64(20),
+				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1), Size: 21134,
+				Duration: 168, Artist: NewNullString("BADBADNOTGOOD & LeLand WILLY")},
+			[]string{"id"},
+			&Song{ID: 10001, Album: NewNullInt64(1), Genre: NullInt64{},
+				Path:  "/home/test/Music/BADBADNOTGOOD/III/03 Sax Stuff.mp3",
+				Title: "Sax Stuff", Track: NewNullInt64(3), NumTracks: NewNullInt64(20),
+				Disk: NewNullInt64(1), NumDisks: NewNullInt64(1),
+				Size: 21134, Duration: 168, Artist: NewNullString("BADBADNOTGOOD & LeLand WILLY")},
+			ErrAlreadyExists,
+		},
 	}
 
 	for testCase, test := range testCases {
-		q, err := wdb.Create(test.query, test.returning)
+		err := wdb.Create(test.query, test.returning)
 
 		if err != test.expErr {
 			t.Errorf("test case %d failed: %v\n", testCase, err)
@@ -555,7 +570,7 @@ func TestAddItem(t *testing.T) {
 		rQ := reflect.ValueOf(test.query)
 		rA := reflect.ValueOf(test.answer)
 		if rQ.Elem().Interface() != rA.Elem().Interface() {
-			t.Errorf("test case %d failed:\n\texpected: %v\n\tresult:   %v\n", testCase, test.answer, q)
+			t.Errorf("test case %d failed:\n\texpected: %v\n\tresult:   %v\n", testCase, test.answer, test.query)
 		}
 	}
 }

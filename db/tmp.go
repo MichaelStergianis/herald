@@ -216,7 +216,6 @@ func prepareUniqueQuery(table string, rquery reflect.Value) (query string, args 
 // Returns a unique item from the database. Requires an id.
 func (wdb *WarblerDB) ReadUnique(query Queryable) (err error) {
 	table, ok := GetTableFromType(query)
-
 	if !ok {
 		return ErrInvalidTable
 	}
@@ -230,6 +229,9 @@ func (wdb *WarblerDB) ReadUnique(query Queryable) (err error) {
 	// write <nil> into an int64 space
 	// https://stackoverflow.com/questions/28642838/how-do-i-handle-nil-return-values-from-database
 	err = wdb.QueryRow(q, a...).Scan(destArr...)
+	if err == sql.ErrNoRows {
+		return ErrNotPresent
+	}
 	if err != nil {
 		return err
 	}
@@ -280,26 +282,53 @@ func (wdb *WarblerDB) Read(queryType interface{}, orderBy []string) ([]interface
 	return results, nil
 }
 
+// setMissingValues is a helper function when creating a new row in
+// database. It writes any missing values to the supplied value from
+// the results.
+func setMissingValues(src interface{}, dest interface{}) error {
+	s := reflect.ValueOf(src)
+	d := reflect.ValueOf(dest)
+	if d.Kind() != reflect.Ptr {
+		return ErrReflection
+	}
+
+	if d.Elem().Type() != s.Type() {
+		return ErrTypeMismatch
+	}
+	d = d.Elem()
+
+	for i := 0; i < s.NumField(); i++ {
+		sf := s.Field(i)
+		df := d.Field(i)
+		if df.CanInterface() && sf.CanInterface() {
+			if df.Interface() != sf.Interface() {
+				df.Set(sf)
+			}
+		}
+	}
+
+	return nil
+}
+
 // Create ...
 // Adds an item to the database. Returning may be the empty string, in
 // which case it will return nothing. Otherwise it must be a valid
 // interfaceable field for the query type and it will be placed into
 // that query and returned.
-func (wdb *WarblerDB) Create(query interface{}, returning []string) (interface{}, error) {
-	var err error
-
+func (wdb *WarblerDB) Create(query interface{}, returning []string) (err error) {
 	// check for existence
 	results, err := wdb.Read(query, []string{})
 	if err != nil {
-		return nil, err
+		return
 	}
 	// got more than one result, non unique information provided
 	if len(results) > 1 {
-		return nil, ErrNonUnique{query}
+		return ErrNonUnique{query}
 	}
 	// got exactly one, probable match, return
 	if len(results) == 1 {
-		return results[0], nil
+		setMissingValues(results[0], query)
+		return ErrAlreadyExists
 	}
 
 	// make a map of sql tags to sql tags to make lookup easy
@@ -311,7 +340,7 @@ func (wdb *WarblerDB) Create(query interface{}, returning []string) (interface{}
 	// lookup corresponding table
 	table, ok := GetTableFromType(query)
 	if !ok {
-		return nil, ErrInvalidTable
+		return ErrInvalidTable
 	}
 
 	rQuery := reflect.ValueOf(query)
@@ -367,8 +396,8 @@ func (wdb *WarblerDB) Create(query interface{}, returning []string) (interface{}
 		}
 	}
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return query, nil
+	return nil
 }

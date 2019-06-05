@@ -256,8 +256,8 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		Name: metadata.Genre(),
 	}
 	if genre.Name != "" {
-		_, err = wdb.Create(genre, []string{"id"})
-		if err != nil {
+		err = wdb.Create(genre, []string{"id"})
+		if err != nil && err != ErrAlreadyExists {
 			return err
 		}
 	}
@@ -267,8 +267,8 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		Name: metadata.AlbumArtist(),
 	}
 	if artist.Name != "" {
-		_, err = wdb.Create(artist, []string{"id"})
-		if err != nil {
+		err = wdb.Create(artist, []string{"id"})
+		if err != nil && err != ErrAlreadyExists {
 			return err
 		}
 	}
@@ -289,8 +289,8 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		Title:     metadata.Album(),
 	}
 
-	_, err = wdb.Create(album, []string{"id"})
-	if err != nil {
+	err = wdb.Create(album, []string{"id"})
+	if err != nil && err != ErrAlreadyExists {
 		return err
 	}
 
@@ -306,8 +306,8 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 		}
 	}
 
-	_, err = wdb.Create(s, []string{"id"})
-	if err != nil {
+	err = wdb.Create(s, []string{"id"})
+	if err != nil && err != ErrAlreadyExists {
 		return err
 	}
 

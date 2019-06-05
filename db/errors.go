@@ -6,10 +6,12 @@ import (
 )
 
 var (
-	// ErrNotPresent ...
-	// Error corresponding to media not being present. Can include
+	// ErrNotPresent corresponds to media not being present. Can include
 	// albums, songs, artists, images.
 	ErrNotPresent = errors.New("wdb: media is not present in database")
+
+	// ErrAlreadyExists occurs during Create when the supplied value already existed in the database
+	ErrAlreadyExists = errors.New("wdb: attempt to create value failed; value already exists")
 
 	// ErrNotAbs ...
 	ErrNotAbs = errors.New("wdb: absolute path not given")
@@ -20,22 +22,24 @@ var (
 	// ErrReflection ...
 	ErrReflection = errors.New("wdb: unmarshalling encountered a nil value or a non-pointer")
 
-	// ErrInvalidTable ...
-	// Returned when an invalid table is requested.
+	// ErrTypeMismatch occurrs in the setMissingValues function when
+	// the src and dest types do not match
+	ErrTypeMismatch = errors.New("wdb: type mismatch while setting values")
+
+	// ErrInvalidTable is returned when an invalid table is requested.
 	ErrInvalidTable = errors.New("wdb: invalid table")
 
-	// ErrInvalidTag ...
-	// Returned when requesting a field that is not present in a
-	// reflected type.
+	// ErrInvalidTag is returned when requesting a field that is not
+	// present in a reflected type.
 	ErrInvalidTag = errors.New("wdb: invalid tag type")
 
-	// ErrInvalidScanner ...
-	// Returned when given an unkown type to create a sql.Scanner object.
+	// ErrInvalidScanner is returned when given an unkown type to
+	// create a sql.Scanner object.
 	ErrInvalidScanner = errors.New("wdb: invalid type given to ValueToScanner")
 )
 
-// ErrNonUnique ...
-// When non unique information is given for a lookup
+// ErrNonUnique occurs When non unique information is given for a
+// lookup
 type ErrNonUnique struct {
 	Query interface{}
 }

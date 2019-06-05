@@ -81,7 +81,7 @@ func ValidFields(tag string, query interface{}) (map[string]struct{}, error) {
 type Library struct {
 	ID   int64  `edn:"id"   json:"id"   sql:"id"`
 	Name string `edn:"name" json:"name" sql:"name"`
-	Path string `edn:"-"    json:"-"    sql:"fs_path"`
+	Path string `edn:"path" json:"path" sql:"fs_path"`
 }
 
 // GetID ...
