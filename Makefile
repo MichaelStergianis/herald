@@ -2,7 +2,7 @@
 
 DBPATH=gitlab.stergianis.ca/michael/warbler/db
 
-run: compile
+run: compile compile-frontend
 	./warbler
 
 compile-db:
@@ -11,10 +11,12 @@ compile-db:
 
 compile: main.go routes.go routes_test.go compile-db
 	go build -v
+
+compile-frontend:
 	make -C frontend/ compile
 
 test:
-	go test -coverprofile=db/coverage.out gitlab.stergianis.ca/michael/warbler/db
+	go test -coverprofile=db/coverage.out ${DBPATH}
 	go test -coverprofile=coverage.out
 
 clean:
