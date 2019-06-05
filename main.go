@@ -15,11 +15,6 @@ import (
 
 const resourcesLoc string = "frontend/resources/public/"
 
-type server struct {
-	hdb    *warblerDB.WarblerDB
-	router *mux.Router
-}
-
 // newServer ...
 func newServer(connStr string) (serv *server, err error) {
 	serv = &server{}

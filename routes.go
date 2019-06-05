@@ -22,6 +22,11 @@ import (
 	"olympos.io/encoding/edn"
 )
 
+type server struct {
+	hdb    *warblerDB.WarblerDB
+	router *mux.Router
+}
+
 type encFunc func(interface{}) ([]byte, error)
 
 type record struct {
