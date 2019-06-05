@@ -18,7 +18,7 @@ const resourcesLoc string = "frontend/resources/public/"
 // newServer ...
 func newServer(connStr string) (serv *server, err error) {
 	serv = &server{}
-	serv.hdb, err = warblerDB.Open(connStr)
+	serv.wdb, err = warblerDB.Open(connStr)
 	if err != nil {
 		return &server{}, err
 	}
@@ -59,11 +59,9 @@ func main() {
 
 	serv, err := newServer("dbname=warbler user=warbler sslmode=disable")
 	check(err)
-	defer serv.hdb.Close()
+	defer serv.wdb.Close()
 
 	serv.addRoutes()
 
-	err = http.ListenAndServe(portString, serv.router)
-	check(err)
-	return
+	log.Fatal(http.ListenAndServe(portString, serv.router))
 }
