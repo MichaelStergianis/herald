@@ -12,6 +12,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"path"
@@ -22,8 +24,10 @@ import (
 	"olympos.io/encoding/edn"
 )
 
+// TODO: make error handling more stylistically consistent.
+
 type server struct {
-	hdb    *warblerDB.WarblerDB
+	wdb    *warblerDB.WarblerDB
 	router *mux.Router
 }
 
@@ -45,6 +49,12 @@ func badRequestErr(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusBadRequest)
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(err.Error()))
+}
+
+// internalServerError ...
+func internalServerError(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusInternalServerError)
+	fmt.Fprint(w, "an internal server error occurred")
 }
 
 // routes ...
@@ -73,16 +83,27 @@ func (serv *server) addRoutes() *server {
 
 	for _, enc := range encoders {
 		subrouter := serv.router.PathPrefix("/" + enc.name + "/").Subrouter()
+
+		// create libraries
+		subrouter.
+			PathPrefix("/library").
+			Methods(http.MethodPost).
+			HandlerFunc(serv.newLibraryCreator(enc))
+		subrouter.
+			PathPrefix("/scanLibrary/{id}").
+			Methods(http.MethodPost).
+			HandlerFunc(serv.newLibraryScanner(enc))
+
 		for _, rec := range records {
 			// add the record type to the subrouter
 			subrouter.
 				HandleFunc(rec.url+"/{id}", serv.NewUniqueQueryHandler(enc, rec.query)).
-				Methods("GET")
+				Methods(http.MethodGet)
 
 			// non unique
 			subrouter.
 				HandleFunc(rec.url+"s/", serv.NewQueryHandler(enc, rec.query)).
-				Methods("GET")
+				Methods(http.MethodGet)
 		}
 	}
 
@@ -93,6 +114,7 @@ func (serv *server) addRoutes() *server {
 // Expects a database object, a table name, and a type to use.
 func (serv *server) NewUniqueQueryHandler(enc encoder, queryType warblerDB.Queryable) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// we need a new memory address for our query because we will write an id.
 		query := warblerDB.NewFromQueryable(queryType)
 
 		params := mux.Vars(r)
@@ -101,20 +123,20 @@ func (serv *server) NewUniqueQueryHandler(enc encoder, queryType warblerDB.Query
 
 		id, err := strconv.Atoi(sID)
 		if err != nil {
-			badRequestErr(w, err)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		query.SetID(int64(id))
-		err = serv.hdb.ReadUnique(query)
-		if err != nil {
-			badRequestErr(w, err)
+		err = serv.wdb.ReadUnique(query)
+		if err == warblerDB.ErrNotPresent {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		response, err := enc.enc(query)
 		if err != nil {
-			badRequestErr(w, err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -149,7 +171,7 @@ func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.Han
 
 		var results []interface{}
 
-		var orderBy []string = r.URL.Query()["orderby"]
+		var orderBy []string = r.URL.Query()[orderField]
 
 		for _, d := range data {
 			// construct the query
@@ -165,7 +187,7 @@ func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.Han
 				return
 			}
 
-			result, err := serv.hdb.Read(query, convTags)
+			result, err := serv.wdb.Read(query, convTags)
 			if err != nil {
 				badRequestErr(w, err)
 				return
@@ -180,5 +202,74 @@ func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.Han
 
 		w.Header().Set("Content-Type", "application/"+enc.name)
 		w.Write(response)
+	}
+}
+
+// createLibrary ...
+func (serv *server) newLibraryCreator(enc encoder) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		var l warblerDB.Library
+		err = enc.dec(data, &l)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		err = serv.wdb.Create(&l, []string{"id"})
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Library already exists.")
+			return
+		}
+
+		returnData, err := enc.enc(l)
+		if err != nil {
+			internalServerError(w)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/"+enc.name)
+		fmt.Fprintf(w, "%s", returnData)
+	}
+}
+
+// newLibraryScanner ...
+func (serv *server) newLibraryScanner(enc encoder) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		params := mux.Vars(r)
+		libID := params["id"]
+		id, err := strconv.ParseInt(libID, 10, 64)
+		if err != nil {
+			badRequestErr(w, err)
+			return
+		}
+
+		lib := warblerDB.Library{ID: id}
+		err = serv.wdb.ReadUnique(&lib)
+		if err != nil {
+			badRequestErr(w, err)
+			return
+		}
+
+		err = serv.wdb.ScanLibrary(lib)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		returnData, err := enc.enc(lib)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/"+enc.name)
+		fmt.Fprintf(w, "%s", returnData)
 	}
 }

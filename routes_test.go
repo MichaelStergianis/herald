@@ -2,12 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -18,6 +17,10 @@ import (
 var (
 	serv      *server
 	prepareDB func()
+	encoders  = [...]encoder{
+		{"json", json.Marshal, json.Unmarshal},
+		{"edn", edn.Marshal, edn.Unmarshal},
+	}
 )
 
 const (
@@ -35,7 +38,7 @@ func TestMain(m *testing.M) {
 	}
 	serv.addRoutes()
 
-	prepareDB, err = warblerDB.PrepareTestDatabase(serv.hdb, "db/fixtures")
+	prepareDB, err = warblerDB.PrepareTestDatabase(serv.wdb, "db/fixtures")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,85 +49,46 @@ func TestMain(m *testing.M) {
 // TestNewUniqueQueryHandler ...
 func TestNewUniqueQueryHandler(t *testing.T) {
 	prepareDB()
-	encoders := [...]encoder{
-		{"json", json.Marshal, json.Unmarshal},
-		{"edn", edn.Marshal, edn.Unmarshal},
-	}
-	records := [...]record{
-		{"library", &warblerDB.Library{ID: 1}},
-		{"genre", &warblerDB.Genre{ID: 1}},
-		{"artist", &warblerDB.Artist{ID: 1}},
-		{"album", &warblerDB.Album{ID: 1}},
-		{"song", &warblerDB.Song{ID: 1}},
-		{"image", &warblerDB.Image{ID: 1}},
-	}
-
-	answers := [...]warblerDB.Queryable{
-		&warblerDB.Library{ID: 1, Name: "Music"},
-		&warblerDB.Genre{ID: 1, Name: "Jazz"},
-		&warblerDB.Artist{ID: 1, Name: "BADBADNOTGOOD"},
-		&warblerDB.Album{
-			ID: 1, Artist: warblerDB.NewNullInt64(1), Year: warblerDB.NewNullInt64(2011), NumTracks: warblerDB.NewNullInt64(20),
-			NumDisks: warblerDB.NewNullInt64(1), Title: "III", Duration: warblerDB.NewNullFloat64(1688),
-		},
-		&warblerDB.Song{
-			ID: 1, Album: warblerDB.NewNullInt64(1), Genre: warblerDB.NewNullInt64(1), Title: "In the Night",
-			Track: warblerDB.NewNullInt64(1), NumTracks: warblerDB.NewNullInt64(20),
-			Disk: warblerDB.NewNullInt64(1), NumDisks: warblerDB.NewNullInt64(1),
-			Size: 204192, Duration: 1993, Artist: warblerDB.NewNullString("BADBADNOTGOOD"),
-		},
-		&warblerDB.Image{ID: 1},
+	cases := []struct {
+		name     string
+		rCode    int
+		url      string
+		response string
+	}{
+		{"library successful", http.StatusOK, "/edn/library/1", `{:id 1 :name"Music":path"/home/test/Music"}`},
+		{"genre successful", http.StatusOK, "/json/genre/1", `{"id":1,"name":"Jazz"}`},
+		{"artist successful", http.StatusOK, "/edn/artist/1", `{:id 1 :name"BADBADNOTGOOD"}`},
+		{"album successful", http.StatusOK, "/json/album/1",
+			`{"id":1,"artist":1,"title":"III","year":2011,"num-tracks":20,"num-disks":1,"duration":1688}`},
+		{"song successful", http.StatusOK, "/edn/song/1",
+			`{:id 1 :album 1 :genre 1 :title"In the Night":size 204192 :duration 1993.0 :track 1 :num-tracks 20 :disk 1 :num-disks 1 :artist "BADBADNOTGOOD"}`},
+		{"image successful", http.StatusOK, "/json/image/1", `{"id":1}`},
+		{"album invalid characters", http.StatusBadRequest, "/edn/album/h9h", ""},
+		{"album number not in database", http.StatusNotFound, "/edn/album/99", ""},
 	}
 
-	// test cases
-	for _, enc := range encoders {
-		for idx, rec := range records {
-			req, err := http.NewRequest("GET", fmt.Sprintf("/%s/%s/%d", enc.name, rec.url, rec.query.GetID()), nil)
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", test.url, nil)
 			if err != nil {
-				t.Errorf("error creating request: %v", err)
+				t.Fatalf("error creating request: %v", err)
 			}
 
 			rr := httptest.NewRecorder()
 
 			serv.router.ServeHTTP(rr, req)
 
-			if rr.Code != http.StatusOK {
-				t.Errorf("error during test case %d handler for %s returned status code %v", idx, rec.url, rr.Code)
+			if test.rCode != rr.Code {
+				t.Errorf("error during test %s expected code: %v received code: %v", test.name, test.rCode, rr.Code)
 			}
 
-			err = enc.dec(rr.Body.Bytes(), rec.query)
-			if err != nil {
-				t.Errorf("encountered error during test case %d decoding response: %v", idx, err)
+			resp := rr.Body.Bytes()
+			if test.response != string(resp) {
+				t.Errorf("response did not match expected\n\texpected: %v\n\treceived: %v", test.response, string(resp))
 			}
 
-			// reflection required to test that they work
-			result := reflect.ValueOf(rec.query).Elem().Interface()
-			expected := reflect.ValueOf(answers[idx]).Elem().Interface()
-			if result != expected {
-				t.Errorf("response did not match expected\n\tresponse: %+v\n\tanswer: %+v",
-					rec.query, answers[idx])
-			}
+		})
 
-		}
-	}
-
-	// secondary cases (incorrect data)
-	urls := []string{
-		"/edn/album/h9h",
-		"/edn/album/99",
-	}
-
-	for _, url := range urls {
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		rr := httptest.NewRecorder()
-		serv.router.ServeHTTP(rr, req)
-
-		if rr.Code != http.StatusBadRequest {
-			t.Errorf("handler for %s returned status code %v", url, rr.Code)
-		}
 	}
 }
 
@@ -187,5 +151,56 @@ func TestNewQueryHandler(t *testing.T) {
 			t.Errorf("answer %d does not match result\n\tquery: %v\n\tresult: %v\n\tanswer: %v", i+1, query, result, answers[i])
 		}
 	}
+}
 
+// TestNewLibrary ...
+func TestNewLibrary(t *testing.T) {
+	libLoc, err := filepath.Abs("db/test_lib")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCases := []struct {
+		name     string
+		lib      warblerDB.Library
+		code     int
+		response warblerDB.Library
+	}{
+		{"standard request", warblerDB.Library{Name: "mylib", Path: libLoc},
+			http.StatusOK, warblerDB.Library{ID: 10001, Name: "mylib", Path: libLoc}},
+		// {"error request", warblerDB.Library{}},
+	}
+	for _, enc := range encoders {
+		for _, test := range testCases {
+			t.Run(enc.name+"_"+test.name, func(t *testing.T) {
+				prepareDB()
+				libString, err := enc.enc(test.lib)
+				if err != nil {
+					t.Error(err)
+				}
+
+				body := strings.NewReader(string(libString))
+				req, err := http.NewRequest(http.MethodPost, "/"+enc.name+"/library", body)
+
+				rr := httptest.NewRecorder()
+
+				serv.router.ServeHTTP(rr, req)
+
+				if test.code != rr.Code {
+					t.Errorf("expected code: %v received code: %v", test.code, rr.Code)
+				}
+
+				resp := rr.Body.Bytes()
+
+				responseLib := warblerDB.Library{}
+				err = enc.dec(resp, &responseLib)
+				if err != nil {
+					t.Error(err)
+				}
+
+				if test.response != responseLib {
+					t.Errorf("expected response: %v, received response: %v", test.response, responseLib)
+				}
+			})
+		}
+	}
 }
