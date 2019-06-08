@@ -6,14 +6,15 @@
 (defn compose [& styles]
   (join " " styles))
 
-(def primary   "#4527a0")
-(def p-light   "#7953d2")
-(def p-dark    "#000070")
-(def secondary "#b39ddb")
-(def s-light   "#e6ceff")
-(def s-dark    "#836fa9")
-(def white     "#ffffff")
-(def black     "#000000")
+(def primary     "#4527a0")
+(def p-light     "#7953d2")
+(def p-dark      "#000070")
+(def secondary   "#b39ddb")
+(def s-light     "#e6ceff")
+(def s-dark      "#836fa9")
+(def white       "#ffffff")
+(def highlighted "#e8e8e8")
+(def black       "#000000")
 
 (def bg-primary {:background-color primary :color white})
 (def bg-secondary {:background-color secondary :color white})
@@ -58,8 +59,9 @@
    :display "inline"})
 
 (defstyles navbar-toggle [height-and-width]
-  {:height "48px"
-   :width  "48px"
+  {:display "inline"
+   :height (str height-and-width "px")
+   :width  (str height-and-width "px")
    :background-color "inherit"
    :cursor "pointer"
    :outline "none"
@@ -107,12 +109,12 @@
    :margin-bottom "0px"
    :list-style-type "none"})
 
-(defstyles sidebar-li [padding]
+(defstyles menu-li []
   {:cursor "pointer"
    :padding "12px"})
 
-(defstyles sidebar-li-active []
-  {:background-color "#e8e8e8"})
+(defstyles highlighted-row []
+  {:background-color highlighted})
 
 (defstyles sidebar-li-icon []
   {:font-size "18px"})
@@ -203,3 +205,35 @@
 
 (defstyles album-button-clicked []
   {:color s-dark})
+
+(defstyles full-screen-backdrop [width height z-index]
+  {:position "fixed"
+   :top "0"
+   :left "0"
+   :display "none"
+   :width  (str width "px")
+   :height (str height "px")
+   :z-index (str z-index)})
+
+(defstyles full-screen-backdrop-active []
+  {:display "block"
+   :cursor "default"})
+
+(defstyles options-menu [top right]
+  {:display "block"
+   :position "absolute"
+   :z-index "99"
+   :visibility "hidden"
+   :opacity "0"
+   :background-color white
+   :border-radius "2px"
+   :color black
+   :box-shadow "1px 0px 3px 0px #c0c0c0"
+   :transition "visibility 0.1s, opacity 0.1s ease-in-out"
+   :&:hover {:background-color highlighted}
+   :top "16px"
+   :right "8px"})
+
+(defstyles options-menu-active []
+  {:visibility "visible"
+   :opacity "1"})

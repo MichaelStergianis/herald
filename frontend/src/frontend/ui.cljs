@@ -1,5 +1,6 @@
 (ns frontend.ui
   (:require [reagent.core :as r]
+            [reagent.dom :refer [dom-node]]
             [ajax.core :refer [GET]]
             [clojure.string :refer [lower-case]]
             [cljss.reagent :refer-macros [defstyled]]
@@ -24,6 +25,15 @@
   {:margin-top (str total-navbar-height "px")
    :padding "16px"
    :height "100%"})
+
+
+(defn full-screen-backdrop
+  "Provides a full screen exit button for whatever context"
+  [state z-index]
+  (fn [state z-index]
+    [:div {:class (compose
+                   (let [[w h] @data/viewport-dims] (s/full-screen-backdrop w h z-index))
+                   (if @state (s/full-screen-backdrop-active)))}]))
 
 (defn random []
   (let [get-random-songs
@@ -80,25 +90,17 @@
        [album {:key (str "album-" (a :id))
                :albumid (a :id)}])]))
 
-(defn toggle-sidebar-visibility! []
-  (reset! data/sidebar-open (not @data/sidebar-open)))
+(defn toggle-visibility! [state]
+  (swap! state not))
 
 (defn sidebar-toggle []
   (fn []
     [:button {:class (compose (s/navbar-toggle navbar-height))
-              :on-click toggle-sidebar-visibility!}
+              :on-click #(toggle-visibility! data/sidebar-open)}
+     [full-screen-backdrop data/sidebar-open "998"]
      [:span {:class (s/sr-only)} "Toggle Navigation"]
      [:i {:class (compose (if @data/sidebar-open (s/color-on-active s/secondary))
                           (s/toggle) (s/circle-bounding) "la la-bars")}]]))
-
-(defn options-toggle []
-  (let [button-active (r/atom false)]
-    (fn []
-      [:button {:class (compose (s/navbar-toggle navbar-height) (s/right))
-                :on-click (fn [] (reset! button-active (not @button-active)))}
-       [:span {:class (s/sr-only)} "Options"]
-       [:i {:class (compose (if @button-active (s/color-on-active s/secondary))
-                            (s/toggle) (s/circle-bounding) "la la-ellipsis-v")}]])))
 
 (defn sidebar-li-click-event! [keyw]
   (fn [e]
@@ -110,15 +112,16 @@
     [:div {:class (compose
                    ;; subtracting 1 from the innerheight prevents
                    ;; the sidebar from exceeding the viewport size
-                   (s/sidebar (- (@data/viewport-dims :height) 1) total-navbar-height sidebar-width)
+                   (let [[_ height] @data/viewport-dims]
+                     (s/sidebar (- height 1) total-navbar-height sidebar-width))
                    (if @data/sidebar-open (s/sidebar-open)))}
      [:ul {:class (s/sidebar-ul)}
       (doall (for [item data/categories]
                (let [keyw (keyword (lower-case (item :name)))]
                  [:li {:key (item :name)
                        :class (compose
-                               (s/sidebar-li 5)
-                               (if (= @data/active keyw) (s/sidebar-li-active)))
+                               (s/menu-li)
+                               (if (= @data/active keyw) (s/highlighted-row)))
                        :on-click (sidebar-li-click-event! keyw)}
                   [:a {:class (compose
                                (item :class)
@@ -127,6 +130,36 @@
                                        (s/pad-in-start 8)
                                        (s/right))
                        :style {:padding-right 5}} (item :name)]])))]]))
+
+(defn options-menu [button-active op-toggle]
+  (fn [button-active op-toggle]
+    (when (-> @op-toggle
+             nil?
+             not)
+      [:div
+       [full-screen-backdrop button-active 98]
+       (let [top   (.-offsetHeight @op-toggle) 
+             right (.-offsetWidth @op-toggle)]
+         [:div {:class (compose (s/options-menu top right) (if @button-active (s/options-menu-active)))}
+          (doall (for [elem [{:content "Manage Libraries" :key "manage-libs"
+                              :click (fn [] (println "hello"))}]]
+                   [:div {:key (str "options-" (elem :key))
+                          :class (compose (s/menu-li))
+                          :on-click (elem :click)}
+                    (elem :content)]))])])))
+
+(defn options-toggle []
+  (let [button-active (r/atom false)
+        op-toggle (r/atom nil)]
+    (fn []
+      [:button {:id "options-toggle"
+                :ref #(reset! op-toggle %)
+                :class (compose (s/navbar-toggle navbar-height) (s/right))
+                :on-click #(toggle-visibility! button-active)}
+       [:span {:class (s/sr-only)} "Options"]
+       [:i {:class (compose (if @button-active (s/color-on-active s/secondary))
+                            (s/toggle) (s/circle-bounding) "la la-ellipsis-v")}]
+       [options-menu button-active op-toggle]])))
 
 (defn navbar
   "Creates a navigation bar"
@@ -143,7 +176,7 @@
        {:class (compose
                 (s/pad-in-start 10)
                 (s/navbar-brand))
-        :on-click #((toggle-sidebar-visibility!) (set-active! :random))} "Warbler"]
+        :on-click #((reset! data/sidebar-open false) (set-active! :random))} "Warbler"]
       ;; options
       [options-toggle]]]))
 

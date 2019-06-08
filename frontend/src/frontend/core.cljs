@@ -13,9 +13,8 @@
 
 (defonce on-create
   (do
-    (let [viewport-fn (fn [] (swap! data/viewport-dims conj
-                                   [:width (.-innerWidth js/window)]
-                                   [:height (.-innerHeight js/window)]))]
+    (let [viewport-fn (fn [] (reset! data/viewport-dims
+                                    [(.-innerWidth js/window) (.-innerHeight js/window)]))]
       (viewport-fn)
       (.addEventListener js/window "resize" viewport-fn))
 

@@ -1,7 +1,7 @@
 (ns frontend.data
   (:require [reagent.core :as r]))
 
-(defonce viewport-dims (r/atom {}))
+(defonce viewport-dims (r/atom []))
 (defonce active (r/atom :random))
 (defonce artists (r/atom (vector)))
 (defonce albums (r/atom (vector)))
