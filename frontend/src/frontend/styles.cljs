@@ -6,15 +6,19 @@
 (defn compose [& styles]
   (join " " styles))
 
-(def primary     "#4527a0")
-(def p-light     "#7953d2")
-(def p-dark      "#000070")
-(def secondary   "#b39ddb")
-(def s-light     "#e6ceff")
-(def s-dark      "#836fa9")
-(def white       "#ffffff")
-(def highlighted "#e8e8e8")
-(def black       "#000000")
+(def primary      "#4527a0")
+(def p-light      "#7953d2")
+(def p-dark       "#000070")
+(def secondary    "#b39ddb")
+(def s-light      "#e6ceff")
+(def s-dark       "#836fa9")
+(def white        "#ffffff")
+(def highlighted  "#e8e8e8")
+(def black        "#000000")
+(def green        "#4CAF50")
+(def border-green "#1B5E20")
+(def red          "#e53935")
+(def border-red   "#b71c1c")
 
 (def bg-primary {:background-color primary :color white})
 (def bg-secondary {:background-color secondary :color white})
@@ -32,6 +36,26 @@
         :-moz-user-select "none" #_(Firefox)
          :-ms-user-select "none" #_(Internet Explorer/Edge)
              :user-select "none" #_(Chrome and Opera)})
+
+
+(defstyles border [style]
+  {:border-style style})
+
+(defstyles margin [margin]
+  {:margin margin})
+
+(defstyles display [display]
+  {:display display})
+
+(defstyles vertical-align [align]
+  {:vertical-align align})
+
+(defstyles bg [color border-color]
+  {:background-color color
+   :border-color border-color})
+
+(defstyles back-toggle []
+  {:cursor "pointer"})
 
 (defstyles navbar []
   {:position "fixed"
@@ -62,6 +86,7 @@
   {:display "inline"
    :height (str height-and-width "px")
    :width  (str height-and-width "px")
+   :text-align "center"
    :background-color "inherit"
    :cursor "pointer"
    :outline "none"
@@ -121,6 +146,9 @@
 
 (defstyles sidebar-li-a []
   {})
+
+(defstyles left []
+  {:float "left"})
 
 (defstyles right []
   {:float "right"})
@@ -237,3 +265,56 @@
 (defstyles options-menu-active []
   {:visibility "visible"
    :opacity "1"})
+
+(defstyles context-menu-shadow []
+  {:box-shadow "2px 2px 4px 2px #c0c0c0a0"})
+
+(defstyles manage-library-menu [width height z-index]
+  {:max-height "40%"
+   :cursor "default"
+   :z-index (str z-index)
+   :background-color white
+   :border-radius "4px"
+   :color black})
+
+(defstyles manage-library-row []
+  {:display "grid"
+   :grid-template-columns "25% auto 40px 40px"
+   :grid-column-gap "4px"
+   :height "40px"
+   :padding "4px 0"
+   :width "100%"})
+
+(defstyles grid-column [column]
+  {:grid-column column})
+
+(defstyles button []
+  {:cursor "pointer"
+   :outline "none"
+   :border-style "solid"
+   :border-width "2px"
+   :border-radius "4px"
+   :padding "6px"
+   :color black
+   :background-color white})
+
+(defstyles manage-lib-cell []
+  {:padding "8px"
+   :border-width "1px"
+   :border-radius "4px"
+   :font-size "16px"
+   :cursor "auto"
+   :overflow "auto"
+   :text-align "left"})
+
+(defstyles hr []
+  {:margin "0"})
+
+(defstyles settings []
+  {:text-align "center"
+   :font-size "16px"})
+
+(defstyles setting []
+  {:padding "16px 0"
+   :cursor "pointer"
+   :&:hover {:background-color highlighted}})

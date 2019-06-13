@@ -26,6 +26,14 @@
    :padding "16px"
    :height "100%"})
 
+(defn back-toggle [set-active]
+  [:button {:class (compose (s/navbar-toggle navbar-height) "la la-arrow-left")
+         :on-click #(set-active! set-active)}])
+
+(defn setting [props & children]
+  (reset! data/sidebar-toggle-function {:function 'back :dest :settings})
+  (fn [props & children]
+    (into [padded-div (r/merge-props {} props)] children)))
 
 (defn full-screen-backdrop
   "Provides a full screen exit button for whatever context"
@@ -36,9 +44,7 @@
                    (if @state (s/full-screen-backdrop-active)))}]))
 
 (defn random []
-  (let [get-random-songs
-        (fn []
-          )]
+  (let [get-random-songs (fn [])]
     (fn []
       [padded-div "Random"])))
 
@@ -117,48 +123,105 @@
                    (if @data/sidebar-open (s/sidebar-open)))}
      [:ul {:class (s/sidebar-ul)}
       (doall (for [item data/categories]
-               (let [keyw (keyword (lower-case (item :name)))]
-                 [:li {:key (item :name)
-                       :class (compose
-                               (s/menu-li)
-                               (if (= @data/active keyw) (s/highlighted-row)))
-                       :on-click (sidebar-li-click-event! keyw)}
-                  [:a {:class (compose
-                               (item :class)
-                               (s/sidebar-li-icon))}]
-                  [:a {:class (compose (s/sidebar-li-a)
-                                       (s/pad-in-start 8)
-                                       (s/right))
-                       :style {:padding-right 5}} (item :name)]])))]]))
+               (let [keyw (item :set-active)]
+                 (if (= (item :name) 'divider)
+                   [:hr {:key (item :name)
+                         :class (s/hr)}]
+                   [:li {:key (item :name)
+                         :class (compose
+                                 (s/menu-li)
+                                 (if (= @data/active keyw) (s/highlighted-row)))
+                         :on-click (sidebar-li-click-event! keyw)}
+                    [:a {:class (compose
+                                 (item :class)
+                                 (s/sidebar-li-icon))}]
+                    [:a {:class (compose (s/sidebar-li-a)
+                                         (s/pad-in-start 8)
+                                         (s/right))
+                         :style {:padding-right 5}} (item :name)]]))))]]))
+
+(defn manage-library-elem [props lib]
+  (let [editing (r/atom (true? (lib :editing)))
+        set-editing (fn [v] (reset! editing v))
+        name (r/atom (lib :name))
+        path (r/atom (lib :path))]
+    (fn [props lib]
+      [:div (r/merge-props {:class (compose (s/manage-library-row))
+                            :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))} props)
+       (if @editing
+         [:input {:value @name
+                  :class (compose (s/manage-lib-cell))
+                  :on-change #(println %)}]
+         [:div {:class (compose (s/manage-lib-cell))} @name])
+       (if @editing
+         [:input {:value @path
+                  :class (compose (s/manage-lib-cell))
+                  :on-change #()}]
+         [:div {:class (compose (s/manage-lib-cell))} @path])
+       (if @editing
+         [:button {:class (compose (s/button) (s/bg s/green s/border-green) "la la-check")
+                   :on-click (fn [] (set-editing false))}]
+         [:button {:class (compose (s/button) "la la-rotate-left")
+                   :on-click (fn [] )}])
+       (if @editing
+         [:button {:class (compose (s/button) (s/bg s/red s/border-red) "la la-close")
+                   :on-click (fn [] (if (lib :new)
+                                     (swap! data/libraries #(vec (filter (fn [m] (not (m :new))) %)))
+                                     (set-editing false)))}]
+         [:button {:class (compose (s/button)  "la la-edit")
+                   :on-click (fn [] (set-editing true))}])])))
+
+
+(defn manage-library-menu [state]
+  (req/get-all "library" data/libraries "id")
+  (fn [state]
+    (let [[w h] @data/viewport-dims
+          z-index 50]
+      [setting {:on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))}
+       [:h2 "Manage Libraries"]
+       [:div {:class (compose (s/manage-library-menu w h z-index))
+              :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))}
+        [:div {:class (compose (s/manage-library-row))}
+         [:div {:class (compose (s/manage-lib-cell) (s/grid-column "1"))} "Name"]
+         [:div {:class (compose (s/manage-lib-cell) (s/grid-column "2"))} "Path"]]
+        (doall
+         (for [lib @data/libraries]
+           [manage-library-elem {:key (lib :name)} lib]))
+        [:div {:class (compose (s/manage-library-row))}
+         [:button {:class (compose (s/button) (s/grid-column "4") "la la-plus")
+                   :on-click (fn [e] (when (empty? (filter #(true? (% :new)) @data/libraries))
+                                        (swap! data/libraries conj {:name "" :path "" :editing true :new true})))}]]]])))
 
 (defn options-menu [button-active op-toggle]
-  (fn [button-active op-toggle]
-    (when (-> @op-toggle
-             nil?
-             not)
-      [:div
-       [full-screen-backdrop button-active 98]
-       (let [top   (.-offsetHeight @op-toggle) 
-             right (.-offsetWidth @op-toggle)]
-         [:div {:class (compose (s/options-menu top right) (if @button-active (s/options-menu-active)))}
-          (doall (for [elem [{:content "Manage Libraries" :key "manage-libs"
-                              :click (fn [] (println "hello"))}]]
-                   [:div {:key (str "options-" (elem :key))
-                          :class (compose (s/menu-li))
-                          :on-click (elem :click)}
-                    (elem :content)]))])])))
+  (let [manage-lib-state (r/atom {:mounted true})]
+    (fn [button-active op-toggle]
+      (when (-> @op-toggle
+               nil?
+               not)
+        [:div
+         [full-screen-backdrop button-active 98]
+         (let [top   (.-offsetHeight @op-toggle) 
+               right (.-offsetWidth @op-toggle)]
+           [:div {:class (compose (s/options-menu top right) (if @button-active (s/options-menu-active)))}
+            (doall (for [elem [{:content "Log Out" :key "log-out"
+                                :click (fn [] nil)}]]
+                     [:div {:key (str "options-" (elem :key))
+                            :class (compose (s/menu-li))
+                            :on-click (elem :click)}
+                      (elem :content)]))])]))))
 
 (defn options-toggle []
   (let [button-active (r/atom false)
         op-toggle (r/atom nil)]
     (fn []
-      [:button {:id "options-toggle"
-                :ref #(reset! op-toggle %)
-                :class (compose (s/navbar-toggle navbar-height) (s/right))
-                :on-click #(toggle-visibility! button-active)}
-       [:span {:class (s/sr-only)} "Options"]
-       [:i {:class (compose (if @button-active (s/color-on-active s/secondary))
-                            (s/toggle) (s/circle-bounding) "la la-ellipsis-v")}]
+      [:div {:id "options-toggle"
+             :ref #(reset! op-toggle %)
+             :class (compose  (s/right))
+             :on-click #(toggle-visibility! button-active)}
+       [:button {:class (compose (s/navbar-toggle navbar-height))}
+        [:span {:class (s/sr-only)} "Options"]
+        [:i {:class (compose (if @button-active (s/color-on-active s/secondary))
+                             (s/toggle) (s/circle-bounding) "la la-ellipsis-v")}]]
        [options-menu button-active op-toggle]])))
 
 (defn navbar
@@ -170,7 +233,11 @@
      [:div {:class (s/between-above-nav (int (/ navbar-height small-bar-divisor)))}]
      [:div {:class (compose (s/pad-in-start 5) (s/navbar-nav navbar-height))}
       ;; toggle
-      [sidebar-toggle]
+      (case (@data/sidebar-toggle-function :function)
+        toggle [sidebar-toggle]
+        back   [back-toggle (@data/sidebar-toggle-function :dest)]
+        ;; default
+        [sidebar-toggle])
       ;; logo
       [:a.navbar-brand
        {:class (compose
@@ -180,6 +247,20 @@
       ;; options
       [options-toggle]]]))
 
+
+(defn settings []
+  (reset! data/sidebar-toggle-function {:function 'toggle})
+  (fn []
+    [padded-div
+     {:class (compose (s/settings))}
+     (doall
+      (for [setting data/settings]
+        [:div {:key (setting :name)}
+         [:div {:class (compose (s/setting))
+               :on-click (fn [] (set-active! (setting :set-active)))}
+          (setting :name)]
+         [:hr {:class (s/hr)}]]))]))
+
 (defn player []
   [:audio {:id "player-html5"}])
 
@@ -188,9 +269,11 @@
    [navbar]
    [sidebar]
    (case @data/active
-     :random [random]
-     :artists [artists]
-     :albums [albums]
+     :random     [random]
+     :artists    [artists]
+     :albums     [albums]
+     :settings   [settings]
+     :manage-lib [manage-library-menu data/manage-library]
      ;; default
      [random])
    [player]])
