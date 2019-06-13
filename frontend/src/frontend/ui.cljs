@@ -43,7 +43,7 @@
       [padded-div "Random"])))
 
 (defn artists []
-  (req/get-all "artists" data/artists "name")
+  (req/get-all "artist" data/artists "name")
   (fn []
     [padded-div {:id "artists"}
      (for [artist @data/artists]
@@ -83,7 +83,7 @@
          [album-button {:class (compose "la la-play")}]]]])))
 
 (defn albums []
-  (req/get-all "albums" data/albums "title")
+  (req/get-all "album" data/albums "title")
   (fn []
     [padded-div {:id "albums"}
      (for [a @data/albums]

@@ -102,7 +102,7 @@ func (serv *server) addRoutes() *server {
 
 			// non unique
 			subrouter.
-				HandleFunc(rec.url+"s/", serv.NewQueryHandler(enc, rec.query)).
+				HandleFunc(rec.url, serv.NewQueryHandler(enc, rec.query)).
 				Methods(http.MethodGet)
 		}
 	}

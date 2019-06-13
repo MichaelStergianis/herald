@@ -36,7 +36,7 @@
 (defn get-all
   "Gets all of a given media type by "
   [media data-loc & order-by]
-  (GET (str "/" communication-protocol "/" media "/")
+  (GET (str "/" communication-protocol "/" media)
        {:params {:orderby order-by}
         :handler (create-write-to-data-handler data-loc #(%1 0))}))
 
