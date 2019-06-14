@@ -106,15 +106,15 @@ func TestNewQueryHandler(t *testing.T) {
 		data   []string
 	}{
 		// okay cases
-		{ednE, http.StatusOK, "/edn/songs/", []string{`{:artist "BADBADNOTGOOD"}`}},
-		{ednE, http.StatusOK, "/edn/songs/", []string{`{:artist "Iron Maiden"}`, `{:artist "Megadeth"}`}},
-		{jsonE, http.StatusOK, "/json/albums/", []string{`{"num-disks": 1}`}},
-		{ednE, http.StatusOK, "/edn/artists/", []string{`{}`}},
-		{jsonE, http.StatusOK, "/json/artists/", []string{`{}`}},
-		{jsonE, http.StatusOK, "/json/albums/", []string{}},
+		{ednE, http.StatusOK, "/edn/song", []string{`{:artist "BADBADNOTGOOD"}`}},
+		{ednE, http.StatusOK, "/edn/song", []string{`{:artist "Iron Maiden"}`, `{:artist "Megadeth"}`}},
+		{jsonE, http.StatusOK, "/json/album", []string{`{"num-disks": 1}`}},
+		{ednE, http.StatusOK, "/edn/artist", []string{`{}`}},
+		{jsonE, http.StatusOK, "/json/artist", []string{`{}`}},
+		{jsonE, http.StatusOK, "/json/album", []string{}},
 
 		// error cases
-		{ednE, http.StatusBadRequest, "/edn/songs/", []string{`4`}},
+		{ednE, http.StatusBadRequest, "/edn/song", []string{`4`}},
 	}
 	answers := []string{
 		`[[{:id 1 :album 1 :genre 1 :title"In the Night":size 204192 :duration 1993.0 :track 1 :num-tracks 20 :disk 1 :num-disks 1 :artist "BADBADNOTGOOD"}{:id 5 :album 1 :genre 1 :title"Triangle":size 204299 :duration 1999.0 :track 2 :num-tracks 20 :disk 1 :num-disks 1 :artist "BADBADNOTGOOD"}{:id 6 :album 1 :genre 1 :title"Something":size 91841 :duration 9381.0 :track nil :num-tracks nil :disk nil :num-disks nil :artist "BADBADNOTGOOD"}]]`,
