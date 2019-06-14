@@ -44,6 +44,7 @@
                    (if @state (s/full-screen-backdrop-active)))}]))
 
 (defn random []
+  ()
   (let [get-random-songs (fn [])]
     (fn []
       [padded-div "Random"])))
@@ -89,6 +90,7 @@
          [album-button {:class (compose "la la-play")}]]]])))
 
 (defn albums []
+  ()
   (req/get-all "album" data/albums "title")
   (fn []
     [padded-div {:id "albums"}
@@ -103,7 +105,7 @@
   (fn []
     [:button {:class (compose (s/navbar-toggle navbar-height))
               :on-click #(toggle-visibility! data/sidebar-open)}
-     [full-screen-backdrop data/sidebar-open "998"]
+     [full-screen-backdrop data/sidebar-open "-1"]
      [:span {:class (s/sr-only)} "Toggle Navigation"]
      [:i {:class (compose (if @data/sidebar-open (s/color-on-active s/secondary))
                           (s/toggle) (s/circle-bounding) "la la-bars")}]]))
@@ -143,21 +145,23 @@
 (defn manage-library-elem [props lib]
   (let [editing (r/atom (true? (lib :editing)))
         set-editing (fn [v] (reset! editing v))
-        name (r/atom (lib :name))
-        path (r/atom (lib :path))]
+        lib-a (r/atom {:name (lib :name)
+                       :path (lib :path)})]
     (fn [props lib]
       [:div (r/merge-props {:class (compose (s/manage-library-row))
                             :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))} props)
        (if @editing
-         [:input {:value @name
+         [:input {:type :text
+                  :name :name
+                  :value (@lib-a :name)
                   :class (compose (s/manage-lib-cell))
-                  :on-change #(println %)}]
-         [:div {:class (compose (s/manage-lib-cell))} @name])
+                  :on-change (fn [e] (swap! lib-a assoc :name (-> e .-target .-value)))}]
+         [:div {:class (compose (s/manage-lib-cell))} (@lib-a :name)])
        (if @editing
-         [:input {:value @path
+         [:input {:value (@lib-a :path)
                   :class (compose (s/manage-lib-cell))
-                  :on-change #()}]
-         [:div {:class (compose (s/manage-lib-cell))} @path])
+                  :on-change (fn [e] (swap! lib-a assoc :path (-> e .-target .-value)))}]
+         [:div {:class (compose (s/manage-lib-cell))} (@lib-a :path)])
        (if @editing
          [:button {:class (compose (s/button) (s/bg s/green s/border-green) "la la-check")
                    :on-click (fn [] (set-editing false))}]
@@ -167,10 +171,11 @@
          [:button {:class (compose (s/button) (s/bg s/red s/border-red) "la la-close")
                    :on-click (fn [] (if (lib :new)
                                      (swap! data/libraries #(vec (filter (fn [m] (not (m :new))) %)))
-                                     (set-editing false)))}]
+                                     (do
+                                       (reset! lib-a lib)
+                                       (set-editing false))))}]
          [:button {:class (compose (s/button)  "la la-edit")
                    :on-click (fn [] (set-editing true))}])])))
-
 
 (defn manage-library-menu [state]
   (req/get-all "library" data/libraries "id")
@@ -204,7 +209,7 @@
                right (.-offsetWidth @op-toggle)]
            [:div {:class (compose (s/options-menu top right) (if @button-active (s/options-menu-active)))}
             (doall (for [elem [{:content "Log Out" :key "log-out"
-                                :click (fn [] nil)}]]
+                                :click (fn [] (println "Log Out"))}]]
                      [:div {:key (str "options-" (elem :key))
                             :class (compose (s/menu-li))
                             :on-click (elem :click)}
@@ -243,7 +248,9 @@
        {:class (compose
                 (s/pad-in-start 10)
                 (s/navbar-brand))
-        :on-click #((reset! data/sidebar-open false) (set-active! :random))} "Warbler"]
+        :on-click (fn [] (reset! data/sidebar-open false)
+                    (set-active! :random)
+                    (reset! data/sidebar-toggle-function {:function 'toggle}))} "Warbler"]
       ;; options
       [options-toggle]]]))
 

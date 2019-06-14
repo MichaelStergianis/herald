@@ -59,7 +59,7 @@
 
 (defstyles navbar []
   {:position "fixed"
-   :z-index "999"
+   :z-index "1000"
    :top "0"
    :left "0"
    :background-color primary
@@ -121,7 +121,7 @@
    :transition "left 0.5s"
    :overflow-x "hidden"
    :box-shadow "1px 0px 3px 0px #c0c0c0"
-   :z-index "999"})
+   :z-index "1001"})
 
 (defstyles sidebar-open []
   {:display "block"
