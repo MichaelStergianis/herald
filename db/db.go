@@ -743,7 +743,7 @@ func (wdb *WarblerDB) Read(queryType interface{}, orderBy []string) ([]interface
 
 // setMissingValues is a helper function when creating a new row in
 // database. It writes any missing values to the supplied value from
-// the results.
+// the results. *Mutative function*.
 func setMissingValues(src interface{}, dest interface{}) error {
 	s := reflect.ValueOf(src)
 	d := reflect.ValueOf(dest)
@@ -769,11 +769,10 @@ func setMissingValues(src interface{}, dest interface{}) error {
 	return nil
 }
 
-// Create ...
-// Adds an item to the database. Returning may be the empty string, in
-// which case it will return nothing. Otherwise it must be a valid
-// interfaceable field for the query type and it will be placed into
-// that query and returned.
+// Create adds an item to the database. Returning may be the empty
+// string, in which case it will return nothing. Otherwise it must be
+// a valid interfaceable field for the query type and it will be
+// placed into that query and returned.
 func (wdb *WarblerDB) Create(query interface{}, returning []string) (err error) {
 	// check for existence
 	results, err := wdb.Read(query, []string{})
@@ -856,6 +855,88 @@ func (wdb *WarblerDB) Create(query interface{}, returning []string) (err error) 
 	}
 	if err != nil {
 		return
+	}
+
+	return nil
+}
+
+func setString(statementNum int, set reflect.Value) (int, string, []interface{}) {
+	setStr := " SET "
+	setVals := make([]interface{}, 0)
+	for i := 0; i < set.NumField(); i++ {
+		f := set.Field(i)
+		if f.CanInterface() && !IsZero(f) {
+			tag := set.Type().Field(i).Tag.Get("sql")
+			if len(setVals) > 0 {
+				setStr += ", "
+			}
+			setStr += fmt.Sprintf("%s = $%d", tag, statementNum)
+			setVals = append(setVals, f.Interface())
+			statementNum++
+		}
+	}
+	return statementNum, setStr, setVals
+}
+
+// whereString ...
+func whereString(statementNum int, where reflect.Value) (int, string, []interface{}) {
+	whereStr := " WHERE "
+	whereVals := make([]interface{}, 0)
+
+	for i := 0; i < where.NumField(); i++ {
+		f := where.Field(i)
+		if f.CanInterface() && !IsZero(f) {
+			tag := where.Type().Field(i).Tag.Get("sql")
+			if len(whereVals) > 0 {
+				whereStr += " AND "
+			}
+			whereStr += fmt.Sprintf("%s = $%d", tag, statementNum)
+			whereVals = append(whereVals, f.Interface())
+			statementNum++
+		}
+	}
+
+	return statementNum, whereStr, whereVals
+}
+
+// Update ...
+func (wdb *WarblerDB) Update(set, where interface{}) (err error) {
+	// UPDATE music.songs SET [using `set`] WHERE [using `where`]
+	rSet, rWhere := reflect.ValueOf(set), reflect.ValueOf(where)
+	if rSet.Kind() == reflect.Ptr {
+		rSet = rSet.Elem()
+	}
+	if rWhere.Kind() == reflect.Ptr {
+		rWhere = rWhere.Elem()
+	}
+	if rSet.Type() != rWhere.Type() {
+		return ErrTypeMismatch
+	}
+
+	tableName, ok := GetTableFromType(where)
+	if !ok {
+		return ErrInvalidTable
+	}
+
+	updateStr := "UPDATE " + tableName
+
+	var statementNum = 1
+	statementNum, setStr, setVals := setString(statementNum, rSet)
+	_, whereStr, whereVals := whereString(statementNum, rWhere)
+
+	vals := append(setVals, whereVals...)
+
+	query := updateStr + setStr + whereStr + ";"
+	fmt.Printf("%s\n", query)
+	fmt.Printf("%#v\n", vals)
+
+	stmt, err := wdb.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(vals...)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -574,3 +574,35 @@ func TestAddItem(t *testing.T) {
 		}
 	}
 }
+
+// TestUpdate ...
+func TestUpdate(t *testing.T) {
+	testCases := [...]struct {
+		name   string
+		set    interface{}
+		where  interface{}
+		expErr error
+		answer interface{}
+	}{
+		{"update first song", &Song{Title: "My Knight"}, &Song{ID: 1}, nil, &Song{}},
+		{"update multiple fields", &Song{Title: "Sour Souls", Track: NewNullInt64(2)}, &Song{ID: 2, Genre: NewNullInt64(2)}, nil, &Song{}},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			prepareDB()
+			var s = &Song{ID: test.where.(*Song).ID}
+			err := wdb.ReadUnique(s)
+			fmt.Printf("%+v\n", s)
+
+			err = wdb.Update(test.set, test.where)
+
+			if test.expErr != err {
+				t.Errorf("expected error did not match received\n\texpected: %v\n\treceived: %v",
+					test.expErr, err)
+			}
+			err = wdb.ReadUnique(s)
+			fmt.Printf("%+v, \n", s)
+		})
+	}
+}

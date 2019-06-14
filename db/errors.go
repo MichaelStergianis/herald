@@ -22,9 +22,8 @@ var (
 	// ErrReflection ...
 	ErrReflection = errors.New("wdb: unmarshalling encountered a nil value or a non-pointer")
 
-	// ErrTypeMismatch occurrs in the setMissingValues function when
-	// the src and dest types do not match
-	ErrTypeMismatch = errors.New("wdb: type mismatch while setting values")
+	// ErrTypeMismatch is returned when a type mismatch occurs during reflection.
+	ErrTypeMismatch = errors.New("wdb: type mismatch")
 
 	// ErrInvalidTable is returned when an invalid table is requested.
 	ErrInvalidTable = errors.New("wdb: invalid table")
