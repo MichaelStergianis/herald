@@ -282,14 +282,14 @@ func TestScanLibrary(t *testing.T) {
 	}
 
 	expectedSong := Song{ID: 10001,
-		Album: NullInt64{NullInt64: sql.NullInt64{Int64: 10001, Valid: true}},
-		Genre: NullInt64{NullInt64: sql.NullInt64{Int64: 0, Valid: false}},
+		Album: NullInt64{NullInt64: sql.NullInt64{10001, true}},
+		Genre: NullInt64{NullInt64: sql.NullInt64{0, false}},
 		Path:  path.Join(testLib, testSong), Title: "Obey", Size: 56417, Duration: 3.46,
-		Track:     NullInt64{NullInt64: sql.NullInt64{Int64: 1, Valid: true}},
-		NumTracks: NullInt64{NullInt64: sql.NullInt64{Int64: 1, Valid: true}},
-		Disk:      NullInt64{NullInt64: sql.NullInt64{Int64: 0, Valid: false}},
-		NumDisks:  NullInt64{NullInt64: sql.NullInt64{Int64: 0, Valid: false}},
-		Artist:    NullString{NullString: sql.NullString{String: "", Valid: false}}}
+		Track:     NullInt64{NullInt64: sql.NullInt64{1, true}},
+		NumTracks: NullInt64{NullInt64: sql.NullInt64{1, true}},
+		Disk:      NullInt64{NullInt64: sql.NullInt64{0, false}},
+		NumDisks:  NullInt64{NullInt64: sql.NullInt64{0, false}},
+		Artist:    NullString{NullString: sql.NullString{"", false}}}
 
 	if songs[0] != expectedSong {
 		t.Errorf("unexpected song parsed\n\texpected: %v\n\tresult: %v\n", expectedSong, songs[0])
@@ -373,17 +373,15 @@ func TestGetUniqueItem(t *testing.T) {
 
 }
 
-// TestGetItem ...
-func TestGetItem(t *testing.T) {
-	prepareDB()
-
+// TestRead ...
+func TestRead(t *testing.T) {
 	testCases := [...]struct {
+		name    string
 		query   interface{}
-		encName string
 		orderby []string
 		answer  []interface{}
 	}{
-		{Song{Artist: NewNullString("BADBADNOTGOOD")}, "edn", []string{},
+		{"lookup songs by song-artist", Song{Artist: NewNullString("BADBADNOTGOOD")}, []string{},
 			[]interface{}{
 				Song{ID: 1, Album: NewNullInt64(1), Genre: NewNullInt64(1),
 					Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
@@ -405,8 +403,9 @@ func TestGetItem(t *testing.T) {
 					Size:     91841,
 					Duration: 9381,
 					Artist:   NewNullString("BADBADNOTGOOD")}}},
+
 		// order by single element
-		{Album{Artist: NewNullInt64(1)}, "json", []string{"num-tracks"},
+		{"lookup albums by album-artist", Album{Artist: NewNullInt64(1)}, []string{"num_tracks"},
 			[]interface{}{
 				Album{ID: 5, Artist: NewNullInt64(1), Year: NewNullInt64(2012),
 					NumTracks: NewNullInt64(19), NumDisks: NewNullInt64(1),
@@ -418,7 +417,8 @@ func TestGetItem(t *testing.T) {
 		},
 
 		// order by multiple elemnts
-		{Album{NumDisks: NewNullInt64(1)}, "edn", []string{"duration", "num-tracks"},
+		{"lookup albums by disk, order by duration, num_tracks",
+			Album{NumDisks: NewNullInt64(1)}, []string{"duration", "num_tracks"},
 			[]interface{}{
 				Album{ID: 5, Artist: NewNullInt64(1), Year: NewNullInt64(2012),
 					NumTracks: NewNullInt64(19), NumDisks: NewNullInt64(1),
@@ -436,7 +436,9 @@ func TestGetItem(t *testing.T) {
 					NumTracks: NewNullInt64(8), NumDisks: NewNullInt64(1),
 					Duration: NewNullFloat64(15440), Title: "Killers"},
 			}},
-		{Album{NumDisks: NewNullInt64(1)}, "edn", []string{"duration", "year"},
+
+		{"lookup albums by number of disks, order by duration, release year",
+			Album{NumDisks: NewNullInt64(1)}, []string{"duration", "release_year"},
 			[]interface{}{
 				Album{ID: 1, Artist: NewNullInt64(1), Year: NewNullInt64(2011),
 					NumTracks: NewNullInt64(20), NumDisks: NewNullInt64(1),
@@ -453,27 +455,43 @@ func TestGetItem(t *testing.T) {
 				Album{ID: 3, Artist: NewNullInt64(3), Year: NewNullInt64(1980),
 					NumTracks: NewNullInt64(8), NumDisks: NewNullInt64(1),
 					Duration: NewNullFloat64(15440), Title: "Killers"},
+			}},
+
+		{"lookup songs by size and genre, order by id",
+			Song{Size: 91841, Genre: NewNullInt64(1)}, []string{"id"},
+			[]interface{}{
+				Song{ID: 6, Album: NullInt64{sql.NullInt64{1, true}},
+					Genre: NullInt64{sql.NullInt64{1, true}},
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/04 Something.mp3",
+					Title: "Something", Size: 91841, Duration: 9381,
+					Track:     NullInt64{sql.NullInt64{0, false}},
+					NumTracks: NullInt64{sql.NullInt64{0, false}},
+					Disk:      NullInt64{sql.NullInt64{0, false}},
+					NumDisks:  NullInt64{sql.NullInt64{0, false}},
+					Artist:    NullString{sql.NullString{"BADBADNOTGOOD", true}}},
 			}},
 	}
 
-	for testCase, test := range testCases {
-		converter := NewTagConverter(test.query, test.encName, "sql")
-		convTags, err := ConvertTags(test.orderby, converter)
-		if err != nil {
-			t.Errorf("error in tag conversion, test case: %d: %v\n", testCase, err)
-		}
-		results, err := wdb.Read(test.query, convTags)
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			prepareDB()
+			results, err := wdb.Read(test.query, test.orderby)
 
-		if err != nil {
-			t.Error(err)
-		}
-
-		for i := range results {
-			if test.answer[i] != results[i] {
-				t.Error(fmt.Errorf("test case %d failed\n\t%9s %+v\n\t%-9s %+v",
-					testCase, "expected:", test.answer[i], "result:", results[i]))
+			if err != nil {
+				t.Error(err)
 			}
-		}
+
+			if len(results) != len(test.answer) {
+				t.Fatalf("number of results do not match expected.\n\tresults: %#v\n\texpected: %v\n", results, test.answer)
+			}
+
+			for i := range results {
+				if test.answer[i] != results[i] {
+					t.Error(fmt.Errorf("test %s failed\n\t%9s %+v\n\t%-9s %+v",
+						test.name, "expected:", test.answer[i], "result:", results[i]))
+				}
+			}
+		})
 	}
 }
 
@@ -578,31 +596,98 @@ func TestAddItem(t *testing.T) {
 // TestUpdate ...
 func TestUpdate(t *testing.T) {
 	testCases := [...]struct {
-		name   string
-		set    interface{}
-		where  interface{}
-		expErr error
-		answer interface{}
+		name         string
+		set          interface{}
+		where        interface{}
+		expErr       error
+		answerLookup interface{}
+		answer       []interface{}
 	}{
-		{"update first song", &Song{Title: "My Knight"}, &Song{ID: 1}, nil, &Song{}},
-		{"update multiple fields", &Song{Title: "Sour Souls", Track: NewNullInt64(2)}, &Song{ID: 2, Genre: NewNullInt64(2)}, nil, &Song{}},
+		{"update first song", Song{Title: "My Knight"}, Song{ID: 1}, nil,
+			Song{ID: 1},
+			[]interface{}{
+				Song{ID: 1, Album: NullInt64{sql.NullInt64{1, true}},
+					Genre: NullInt64{sql.NullInt64{1, true}},
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
+					Title: "My Knight", Size: 204192, Duration: 1993,
+					Track:     NullInt64{sql.NullInt64{1, true}},
+					NumTracks: NullInt64{sql.NullInt64{20, true}},
+					Disk:      NullInt64{sql.NullInt64{1, true}},
+					NumDisks:  NullInt64{sql.NullInt64{1, true}},
+					Artist:    NullString{sql.NullString{"BADBADNOTGOOD", true}}},
+			}},
+
+		{"update multiple fields", Song{NumTracks: NewNullInt64(20), Track: NewNullInt64(4)},
+			Song{Size: 91841, Genre: NewNullInt64(1)}, nil,
+			Song{Size: 91841, Genre: NewNullInt64(1)},
+			[]interface{}{
+				Song{ID: 6, Album: NullInt64{sql.NullInt64{1, true}},
+					Genre: NullInt64{sql.NullInt64{1, true}},
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/04 Something.mp3",
+					Title: "Something", Size: 91841, Duration: 9381,
+					Track:     NullInt64{sql.NullInt64{4, true}},
+					NumTracks: NullInt64{sql.NullInt64{20, true}},
+					Disk:      NullInt64{sql.NullInt64{0, false}},
+					NumDisks:  NullInt64{sql.NullInt64{0, false}},
+					Artist:    NullString{sql.NullString{"BADBADNOTGOOD", true}}},
+			}},
+
+		{"update multiple songs' artist using artist as query", Song{Artist: NewNullString("BED BED NUT GUD")},
+			Song{Artist: NewNullString("BADBADNOTGOOD")}, nil,
+			Song{Artist: NewNullString("BED BED NUT GUD")},
+			[]interface{}{
+				Song{ID: 1, Album: NullInt64{sql.NullInt64{1, true}},
+					Genre: NullInt64{sql.NullInt64{1, true}},
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/01 In the Night.mp3",
+					Title: "In the Night", Size: 204192, Duration: 1993,
+					Track:     NullInt64{sql.NullInt64{1, true}},
+					NumTracks: NullInt64{sql.NullInt64{20, true}},
+					Disk:      NullInt64{sql.NullInt64{1, true}},
+					NumDisks:  NullInt64{sql.NullInt64{1, true}},
+					Artist:    NullString{sql.NullString{"BED BED NUT GUD", true}}},
+				Song{ID: 5, Album: NullInt64{sql.NullInt64{1, true}},
+					Genre: NullInt64{sql.NullInt64{1, true}},
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/02 Triangle.mp3",
+					Title: "Triangle", Size: 204299, Duration: 1999,
+					Track:     NullInt64{sql.NullInt64{2, true}},
+					NumTracks: NullInt64{sql.NullInt64{20, true}},
+					Disk:      NullInt64{sql.NullInt64{1, true}},
+					NumDisks:  NullInt64{sql.NullInt64{1, true}},
+					Artist:    NullString{sql.NullString{"BED BED NUT GUD", true}}},
+				Song{ID: 6, Album: NullInt64{sql.NullInt64{1, true}},
+					Genre: NullInt64{sql.NullInt64{1, true}},
+					Path:  "/home/test/Music/BADBADNOTGOOD/III/04 Something.mp3",
+					Title: "Something", Size: 91841, Duration: 9381,
+					Track:     NullInt64{sql.NullInt64{0, false}},
+					NumTracks: NullInt64{sql.NullInt64{0, false}},
+					Disk:      NullInt64{sql.NullInt64{0, false}},
+					NumDisks:  NullInt64{sql.NullInt64{0, false}},
+					Artist:    NullString{sql.NullString{"BED BED NUT GUD", true}}}},
+		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			prepareDB()
-			var s = &Song{ID: test.where.(*Song).ID}
-			err := wdb.ReadUnique(s)
-			fmt.Printf("%+v\n", s)
 
-			err = wdb.Update(test.set, test.where)
-
+			err := wdb.Update(test.set, test.where)
 			if test.expErr != err {
 				t.Errorf("expected error did not match received\n\texpected: %v\n\treceived: %v",
 					test.expErr, err)
 			}
-			err = wdb.ReadUnique(s)
-			fmt.Printf("%+v, \n", s)
+
+			result, err := wdb.Read(test.answerLookup, []string{})
+			if len(result) != len(test.answer) {
+				t.Fatalf("expected length of results did not match length of answer\n\tresults: %v\n\tanswer: %v\n",
+					result, test.answer)
+			}
+
+			for i := range result {
+				if result[i] != test.answer[i] {
+					t.Errorf("result %d did not match answer\n\tresult: %v\n\tanswer: %v\n",
+						i, result[i], test.answer[i])
+				}
+			}
 		})
 	}
 }

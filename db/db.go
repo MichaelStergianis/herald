@@ -901,7 +901,7 @@ func whereString(statementNum int, where reflect.Value) (int, string, []interfac
 
 // Update ...
 func (wdb *WarblerDB) Update(set, where interface{}) (err error) {
-	// UPDATE music.songs SET [using `set`] WHERE [using `where`]
+	// UPDATE schema.table SET [using `set`] WHERE [using `where`]
 	rSet, rWhere := reflect.ValueOf(set), reflect.ValueOf(where)
 	if rSet.Kind() == reflect.Ptr {
 		rSet = rSet.Elem()
@@ -927,8 +927,6 @@ func (wdb *WarblerDB) Update(set, where interface{}) (err error) {
 	vals := append(setVals, whereVals...)
 
 	query := updateStr + setStr + whereStr + ";"
-	fmt.Printf("%s\n", query)
-	fmt.Printf("%#v\n", vals)
 
 	stmt, err := wdb.Prepare(query)
 	if err != nil {
