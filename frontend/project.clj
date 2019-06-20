@@ -13,7 +13,7 @@
                  [reagent "0.8.1"]
                  [cljs-ajax "0.7.5"]]
 
-  :plugins [[lein-cljsbuild "1.1.7"]]
+  :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
 
   :source-paths ["src"]
 
@@ -52,7 +52,7 @@
                                   [com.bhauman/rebel-readline-cljs "0.1.4"]]
 
                    ;; for CIDER
-                   :plugins [[cider/cider-nrepl "0.21.1"]]
+                   :plugins [[cider/cider-nrepl "0.21.0"]]
                    ;; :repl-options {:nrepl-middleware [[cider.piggieback/wrap-cljs-repl]]}
                    ;; need to add the compliled assets to the :clean-targets
                    :clean-targets ^{:protect false} ["resources/public/js/" :target-path]}})
