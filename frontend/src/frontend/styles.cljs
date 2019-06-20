@@ -12,13 +12,17 @@
 (def secondary    "#b39ddb")
 (def s-light      "#e6ceff")
 (def s-dark       "#836fa9")
+
 (def white        "#ffffff")
 (def highlighted  "#e8e8e8")
 (def black        "#000000")
-(def green        "#4CAF50")
-(def border-green "#1B5E20")
-(def red          "#e53935")
-(def border-red   "#b71c1c")
+
+(def green         "#4caf50")
+(def border-green  "#1b5e20")
+(def red           "#e53935")
+(def border-red    "#b71c1c")
+(def yellow        "#fdd835")
+(def border-yellow "#f9a825")
 
 (def bg-primary {:background-color primary :color white})
 (def bg-secondary {:background-color secondary :color white})
@@ -91,7 +95,7 @@
    :cursor "pointer"
    :outline "none"
    :border "none"
-   :font-size "18px"
+   :font-size "22px"
    :color white})
 
 (defstyles toggle []
@@ -129,7 +133,7 @@
 
 (defstyles sidebar-ul []
   {:padding-inline-start "0px"
-   :font-size "15px"
+   :font-size "18px"
    :margin-top "0px"
    :margin-bottom "0px"
    :list-style-type "none"})
@@ -198,9 +202,10 @@
 
 (defstyles album-img []
   {:width  "100%"
-   :height "100%"
+   :height "75%"
+   :top "45%"
+   :left "0"
    :margin "0"
-   :top "50%"
    :color s-light
    :transform "translateY(-25%)"
    :-ms-transform "translateY(-25%)"
@@ -215,7 +220,7 @@
    :position "absolute"
    :bottom "0"
    :right "0"
-   :font-size "18px"
+   :font-size "22px"
    :color white
    :visibility "hidden"
    :opacity "0"
@@ -277,13 +282,14 @@
    :border-radius "4px"
    :color black})
 
-(defstyles manage-library-row []
+(defstyles manage-library-row [buttons]
   {:display "grid"
-   :grid-template-columns "25% auto 40px 40px"
+   :grid-template-columns (clojure.string/join " " (concat '("25% auto") (repeat buttons "40px")))
    :grid-column-gap "4px"
    :height "40px"
    :padding "4px 0"
-   :width "100%"})
+   :width "100%"
+   :&:-webkit-scrollbar {:width "1px"}})
 
 (defstyles grid-column [column]
   {:grid-column column})

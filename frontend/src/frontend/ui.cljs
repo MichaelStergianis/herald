@@ -19,11 +19,11 @@
 (defonce total-navbar-height (+ navbar-height
                                 (/ navbar-height medium-bar-divisor)
                                 (/ navbar-height small-bar-divisor)))
-(defonce sidebar-width 160)
+(defonce sidebar-width 180)
 
 (defstyled padded-div :div
   {:margin-top (str total-navbar-height "px")
-   :padding "16px"
+   :padding "8px"
    :height "100%"})
 
 (defn back-toggle [set-active]
