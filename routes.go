@@ -93,6 +93,11 @@ func (serv *server) addRoutes() *server {
 			PathPrefix("/scanLibrary/{id}").
 			Methods(http.MethodPost).
 			HandlerFunc(serv.newLibraryScanner(enc))
+		// echo is disabled in code by default for now, maybe a config
+		// option later
+		/* subrouter.
+		PathPrefix("/echo").
+		HandlerFunc(serv.newEchoRoute(enc)) */
 
 		for _, rec := range records {
 			// add the record type to the subrouter
@@ -271,5 +276,18 @@ func (serv *server) newLibraryScanner(enc encoder) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/"+enc.name)
 		fmt.Fprintf(w, "%s", returnData)
+	}
+}
+
+// newEchoRoute is a helper route that will print the body of any
+// request. Can be used to inspect frontend ajax calls.
+func (serv *server) newEchoRoute(enc encoder) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+		fmt.Printf("%s\n", body)
 	}
 }
