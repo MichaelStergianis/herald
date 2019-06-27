@@ -12,12 +12,15 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	warblerDB "gitlab.stergianis.ca/michael/warbler/db"
@@ -25,6 +28,10 @@ import (
 )
 
 // TODO: make error handling more stylistically consistent.
+
+var (
+	unixEpoch = time.Unix(0, 0)
+)
 
 type server struct {
 	wdb    *warblerDB.WarblerDB
@@ -93,6 +100,17 @@ func (serv *server) addRoutes() *server {
 			PathPrefix("/scanLibrary/{id}").
 			Methods(http.MethodPost).
 			HandlerFunc(serv.newLibraryScanner(enc))
+		subrouter.
+			PathPrefix("/library").
+			Methods(http.MethodPut).
+			HandlerFunc(serv.newLibraryUpdater(enc))
+
+		// streaming
+		subrouter.
+			PathPrefix("/stream/{id}").
+			Methods(http.MethodGet).
+			HandlerFunc(serv.newStreamRoute(enc))
+
 		// echo is disabled in code by default for now, maybe a config
 		// option later
 		/* subrouter.
@@ -210,7 +228,10 @@ func (serv *server) NewQueryHandler(enc encoder, queryType interface{}) http.Han
 	}
 }
 
-// createLibrary ...
+// newLibraryCreator creates a library creator based on the current
+// server. It allows you to issue a request via http to create a
+// database object representing the root location of a collection of
+// audio files.
 func (serv *server) newLibraryCreator(enc encoder) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := ioutil.ReadAll(r.Body)
@@ -240,6 +261,52 @@ func (serv *server) newLibraryCreator(enc encoder) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/"+enc.name)
 		fmt.Fprintf(w, "%s", returnData)
+	}
+}
+
+// newLibraryUpdater creates a library updater
+func (serv *server) newLibraryUpdater(enc encoder) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		var (
+			tmp   warblerDB.Library
+			set   warblerDB.Library
+			where warblerDB.Library
+		)
+
+		// read the provided library
+		err = enc.dec(data, &tmp)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		// name and path will be updated, any elements not provided in
+		// the body will be encoded as zero values and will be ignored
+		// by wdb.Update.
+		set.Name = tmp.Name
+		set.Path = tmp.Path
+
+		// using id to identify where
+		where.ID = tmp.ID
+
+		rowsAffected, err := serv.wdb.Update(set, where)
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		if rowsAffected != 1 {
+			internalServerError(w)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -289,5 +356,42 @@ func (serv *server) newEchoRoute(enc encoder) http.HandlerFunc {
 			return
 		}
 		fmt.Printf("%s\n", body)
+	}
+}
+
+// newStreamRoute ...
+func (serv *server) newStreamRoute(enc encoder) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// read the song id from the request
+		params := mux.Vars(r)
+		idS, ok := params["id"]
+		if !ok {
+			badRequestErr(w, errors.New("no id provided"))
+			return
+		}
+
+		id, err := strconv.ParseInt(idS, 10, 64)
+		if err != nil {
+			badRequestErr(w, errors.New("invalid id"))
+			return
+		}
+
+		song := warblerDB.Song{ID: id}
+		err = serv.wdb.ReadUnique(&song)
+		if err != nil {
+			badRequestErr(w, errors.New("bad lookup"))
+			return
+		}
+
+		// lookup file for the song
+		f, err := os.OpenFile(song.Path, os.O_RDONLY, 0644)
+		defer f.Close()
+		if err != nil {
+			internalServerError(w)
+			return
+		}
+
+		// serve content supports ranged headers
+		http.ServeContent(w, r, song.Path, unixEpoch, f)
 	}
 }

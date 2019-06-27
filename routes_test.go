@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -17,9 +18,11 @@ import (
 var (
 	serv      *server
 	prepareDB func()
-	encoders  = [...]encoder{
-		{"json", json.Marshal, json.Unmarshal},
-		{"edn", edn.Marshal, edn.Unmarshal},
+
+	jsonE    = encoder{"json", json.Marshal, json.Unmarshal}
+	ednE     = encoder{"edn", edn.Marshal, edn.Unmarshal}
+	encoders = [...]encoder{
+		jsonE, ednE,
 	}
 )
 
@@ -96,9 +99,6 @@ func TestNewUniqueQueryHandler(t *testing.T) {
 func TestNewQueryHandler(t *testing.T) {
 	prepareDB()
 
-	ednE := encoder{"edn", edn.Marshal, edn.Unmarshal}
-	jsonE := encoder{"json", json.Marshal, json.Unmarshal}
-
 	cases := []struct {
 		enc    encoder
 		status int
@@ -161,46 +161,70 @@ func TestNewLibrary(t *testing.T) {
 	}
 	testCases := []struct {
 		name     string
-		lib      warblerDB.Library
+		enc      encoder
+		bodyStr  string
 		code     int
-		response warblerDB.Library
+		expected string
 	}{
-		{"standard request", warblerDB.Library{Name: "mylib", Path: libLoc},
-			http.StatusOK, warblerDB.Library{ID: 10001, Name: "mylib", Path: libLoc}},
-		// {"error request", warblerDB.Library{}},
+		{"create \"NewMusic\"", ednE, fmt.Sprintf(`{:name "NewMusic" :path %q}`, libLoc),
+			http.StatusOK, fmt.Sprintf(`{:id 10001 :name"NewMusic":path%q}`, libLoc)},
 	}
-	for _, enc := range encoders {
-		for _, test := range testCases {
-			t.Run(enc.name+"_"+test.name, func(t *testing.T) {
-				prepareDB()
-				libString, err := enc.enc(test.lib)
-				if err != nil {
-					t.Error(err)
-				}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			prepareDB()
+			body := strings.NewReader(test.bodyStr)
+			req, err := http.NewRequest(http.MethodPost, "/"+test.enc.name+"/library", body)
+			if err != nil {
+				t.Errorf("error in %s: %v", test.name, err)
+			}
 
-				body := strings.NewReader(string(libString))
-				req, err := http.NewRequest(http.MethodPost, "/"+enc.name+"/library", body)
+			rr := httptest.NewRecorder()
 
-				rr := httptest.NewRecorder()
+			serv.router.ServeHTTP(rr, req)
 
-				serv.router.ServeHTTP(rr, req)
+			if test.code != rr.Code {
+				t.Errorf("expected code in %s: %v received code: %v", test.name, test.code, rr.Code)
+			}
 
-				if test.code != rr.Code {
-					t.Errorf("expected code: %v received code: %v", test.code, rr.Code)
-				}
-
-				resp := rr.Body.Bytes()
-
-				responseLib := warblerDB.Library{}
-				err = enc.dec(resp, &responseLib)
-				if err != nil {
-					t.Error(err)
-				}
-
-				if test.response != responseLib {
-					t.Errorf("expected response: %v, received response: %v", test.response, responseLib)
-				}
-			})
-		}
+			response := string(rr.Body.Bytes())
+			if test.expected != response {
+				t.Errorf("unexpected body in %q:\n\texpected: %s\n\treceived: %s\n",
+					test.name, test.expected, response)
+			}
+		})
 	}
+}
+
+// TestNewLibraryUpdate ...
+func TestNewLibraryUpdate(t *testing.T) {
+	testCases := []struct {
+		name    string
+		enc     encoder
+		bodyStr string
+		code    int
+	}{
+		{"update \"Music\" successfully", ednE, `{:id 1 :name "NewMusic"}`, http.StatusOK},
+		{"non numerical id", ednE, `{:id "my-music" :name "NewMusic"}`, http.StatusInternalServerError},
+		{"index not found", ednE, `{:id 99 :name "NewMusic"}`, http.StatusInternalServerError},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			prepareDB()
+
+			body := strings.NewReader(test.bodyStr)
+			req, err := http.NewRequest(http.MethodPut, "/"+test.enc.name+"/library", body)
+			if err != nil {
+				t.Errorf("error in %s: %v", test.name, err)
+			}
+
+			rr := httptest.NewRecorder()
+
+			serv.router.ServeHTTP(rr, req)
+
+			if test.code != rr.Code {
+				t.Errorf("expected code in %s: %v received code: %v", test.name, test.code, rr.Code)
+			}
+		})
+	}
+
 }
