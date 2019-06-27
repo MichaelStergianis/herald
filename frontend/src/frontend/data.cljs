@@ -17,3 +17,6 @@
                      {:name "Settings" :class "la la-cog" :set-active :settings}])
 
 (defonce settings [{:name "Manage Libraries" :set-active :manage-lib}])
+
+(defonce player (r/atom {:visible false
+                         :playing false}))

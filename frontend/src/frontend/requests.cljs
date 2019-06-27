@@ -2,7 +2,7 @@
   (:require [cljs.reader]
             [frontend.data :as data]
             [reagent.core :as r]
-            [ajax.core :refer [GET POST]]))
+            [ajax.core :refer [GET POST PUT DELETE]]))
 
 (def parser cljs.reader/read-string)
 (def communication-protocol "edn")
@@ -19,8 +19,9 @@
   (fn [response]
     (let [album-resp (parser response)]
       (reset! album-data album-resp)
-      (GET (str "/" communication-protocol "/" "artist/" (@album-data :artist))
-           {:handler (create-write-to-data-handler artist-data (fn [response] response))}))))
+      (if (@album-data :artist)
+        (GET (str "/" communication-protocol "/" "artist/" (@album-data :artist))
+             {:handler (create-write-to-data-handler artist-data (fn [response] response))})))))
 
 (defn query-unique [table id]
   (GET (str "/" communication-protocol "/" table "/" id)))
@@ -45,3 +46,22 @@
   [id media data-loc]
   (GET (str "/" communication-protocol "/" media "/" id)
        {:handler (create-write-to-data-handler data-loc (fn [i] i))}))
+
+(defn scan-library
+  "POSTS a request to the server to re-scan the given library."
+  [id]
+  (POST (str "/" communication-protocol "/scanLibrary/" id)
+        {:handler #(println %)}))
+
+(defn create-library [name path]
+  (POST (str "/" communication-protocol "/library")
+      {:body (str {:name name :path path})
+       :handler #(swap! data/libraries conj (parser %))}))
+
+
+(-> {:a nil} empty? not)
+
+(defn update-library [id name path]
+  (println id name path)
+  (PUT (str "/" communication-protocol "/library")
+       {:body (str {:id id :name name :path path})}))

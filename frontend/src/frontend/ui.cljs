@@ -7,7 +7,7 @@
             [frontend.styles :as s :refer [compose]]
             [frontend.util     :as util :refer [by-id]]
             [frontend.requests :as req]
-            [frontend.data    :as data]))
+            [frontend.data     :as data]))
 
 (defn set-active! [k]
   (reset! data/active k))
@@ -26,12 +26,13 @@
    :padding "8px"
    :height "100%"})
 
-(defn back-toggle [set-active]
+(defn back-toggle [set-active title]
   [:button {:class (compose (s/navbar-toggle navbar-height) "la la-arrow-left")
-         :on-click #(set-active! set-active)}])
+            :title title
+            :on-click #(set-active! set-active)}])
 
 (defn setting [props & children]
-  (reset! data/sidebar-toggle-function {:function 'back :dest :settings})
+  (reset! data/sidebar-toggle-function {:function 'back :dest :settings :title "Settings"})
   (fn [props & children]
     (into [padded-div (r/merge-props {} props)] children)))
 
@@ -82,7 +83,7 @@
         [:div {:class (s/album-background)}]
         [:i {:class (compose "la la-music" (s/album-img))}]
         [:div {:class (compose (s/no-select) (s/album-info))}
-         [:b (@artist-info :name)]
+         [:b (let [a (@artist-info :name)] (if a a "Unknown Artist"))]
          [:br]
          (@album-info :title)]
         [:div {:class (compose (s/album-buttons) (if @mouse-on? (s/album-buttons-show)))}
@@ -142,92 +143,114 @@
                                          (s/right))
                          :style {:padding-right 5}} (item :name)]]))))]]))
 
-(defn manage-library-elem [props lib]
-  (let [editing (r/atom (true? (lib :editing)))
+(defn manage-library-elem [props libs lib-idx]
+  (let [lib         (@libs lib-idx)
+        editing     (r/atom (true? (lib :editing)))
+        id          (lib :id)
         set-editing (fn [v] (reset! editing v))
-        lib-a (r/atom {:name (lib :name)
-                       :path (lib :path)})]
-    (fn [props lib]
-      [:div (r/merge-props {:class (compose (s/manage-library-row))
-                            :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))} props)
-       (if @editing
-         [:input {:type :text
-                  :name :name
-                  :value (@lib-a :name)
-                  :class (compose (s/manage-lib-cell))
-                  :on-change (fn [e] (swap! lib-a assoc :name (-> e .-target .-value)))}]
-         [:div {:class (compose (s/manage-lib-cell))} (@lib-a :name)])
-       (if @editing
-         [:input {:value (@lib-a :path)
-                  :class (compose (s/manage-lib-cell))
-                  :on-change (fn [e] (swap! lib-a assoc :path (-> e .-target .-value)))}]
-         [:div {:class (compose (s/manage-lib-cell))} (@lib-a :path)])
-       (if @editing
-         [:button {:class (compose (s/button) (s/bg s/green s/border-green) "la la-check")
-                   :on-click (fn [] (set-editing false))}]
-         [:button {:class (compose (s/button) "la la-rotate-left")
-                   :on-click (fn [] )}])
-       (if @editing
-         [:button {:class (compose (s/button) (s/bg s/red s/border-red) "la la-close")
-                   :on-click (fn [] (if (lib :new)
-                                     (swap! data/libraries #(vec (filter (fn [m] (not (m :new))) %)))
-                                     (do
-                                       (reset! lib-a lib)
-                                       (set-editing false))))}]
-         [:button {:class (compose (s/button)  "la la-edit")
-                   :on-click (fn [] (set-editing true))}])])))
+        lib-a       (r/atom {:id   (lib :id)
+                             :name (lib :name)
+                             :path (lib :path)})]
+    (fn [props libs lib-idx]
+      (if @editing
+        (let [update-input (fn [target e] (swap! lib-a assoc target (-> e .-target .-value) :edited true))]
+          [:div (r/merge-props {:class (compose (s/manage-library-row 3))
+                                :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))} props)
+           [:input {:type :text
+                    :name :name
+                    :value (@lib-a :name)
+                    :class (compose (s/manage-lib-cell))
+                    :on-change (partial update-input :name)}]
+           [:input {:value (@lib-a :path)
+                    :class (compose (s/manage-lib-cell))
+                    :on-change (partial update-input :path)}]
+           [:button {:class (compose (s/button) (s/bg s/green s/border-green) "la la-check")
+                     :title "Confirm"
+                     :on-click (fn []
+                                 (let [{id :id name :name path :path} @lib-a]
+                                   (when (@lib-a :edited)
+                                     (if (lib :new)
+                                       (req/create-library name path)
+                                       (req/update-library id name path)))
+                                   (let [update-lib (fn [target value] (swap! libs assoc-in [lib-idx target] value))]
+                                     (update-lib :name name)
+                                     (update-lib :path path)))
+                                 (set-editing false))}]
 
-(defn manage-library-menu [state]
-  (req/get-all "library" data/libraries "id")
-  (fn [state]
-    (let [[w h] @data/viewport-dims
-          z-index 50]
-      [setting {:on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))}
-       [:h2 "Manage Libraries"]
-       [:div {:class (compose (s/manage-library-menu w h z-index))
-              :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))}
-        [:div {:class (compose (s/manage-library-row))}
-         [:div {:class (compose (s/manage-lib-cell) (s/grid-column "1"))} "Name"]
-         [:div {:class (compose (s/manage-lib-cell) (s/grid-column "2"))} "Path"]]
-        (doall
-         (for [lib @data/libraries]
-           [manage-library-elem {:key (lib :name)} lib]))
-        [:div {:class (compose (s/manage-library-row))}
-         [:button {:class (compose (s/button) (s/grid-column "4") "la la-plus")
-                   :on-click (fn [e] (when (empty? (filter #(true? (% :new)) @data/libraries))
+           (assoc-in [{:name "lib1"} {:name "lib2"}] [0 :name] "lib3")
+
+           [:button {:class (compose (s/button) (s/bg s/yellow s/border-yellow) "la la-close")
+                     :title "Cancel"
+                     :on-click (fn []
+                                 (swap! lib-a dissoc :edited)
+                                 (if (lib :new)
+                                   (swap! data/libraries #(vec (filter (fn [m] (not (m :new))) %)))
+                                   (do (reset! lib-a lib) (set-editing false))))}]
+           [:button {:class (compose (s/button) (s/bg s/red s/border-red) "la la-trash-o")
+                     :title "Delete library"}]])
+        [:div (r/merge-props {:class (compose (s/manage-library-row 2))
+                              :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))} props)
+         [:div {:class (compose (s/manage-lib-cell))} (@lib-a :name)]
+         [:div {:class (compose (s/manage-lib-cell))} (@lib-a :path)]
+         [:button {:class (compose (s/button) "la la-rotate-left")
+                   :title "Re-scan library"
+                   :on-click #(req/scan-library id)}]
+         [:button {:class (compose (s/button) "la la-edit")
+                   :title "Edit library"
+                   :on-click (fn [] (set-editing true))}]]))))
+
+  (defn manage-library-menu [state]
+    (req/get-all "library" data/libraries "id")
+    (fn [state]
+      (let [[w h] @data/viewport-dims
+            z-index 50]
+        [setting {:on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))}
+         [:h2 "Manage Libraries"]
+         [:div {:class (compose (s/manage-library-menu w h z-index))
+                :on-click (fn [e] (if (.-stopPropagation e) (.stopPropagation e)))}
+          [:div {:class (compose (s/manage-library-row 2))}
+           [:div {:class (compose (s/manage-lib-cell) (s/grid-column "1"))} "Name"]
+           [:div {:class (compose (s/manage-lib-cell) (s/grid-column "2"))} "Path"]]
+          (doall
+           (for [lib-idx (range (count @data/libraries))]
+             [manage-library-elem {:key lib-idx} data/libraries lib-idx]))
+          [:div {:class (compose (s/manage-library-row 1))}
+           [:button {:class (compose (s/button) (s/grid-column "3") "la la-plus")
+                     :title "Add library"
+                     :on-click (fn [e] (when (empty? (filter #(true? (% :new)) @data/libraries))
                                         (swap! data/libraries conj {:name "" :path "" :editing true :new true})))}]]]])))
 
-(defn options-menu [button-active op-toggle]
-  (let [manage-lib-state (r/atom {:mounted true})]
-    (fn [button-active op-toggle]
-      (when (-> @op-toggle
-               nil?
-               not)
-        [:div
-         [full-screen-backdrop button-active 98]
-         (let [top   (.-offsetHeight @op-toggle) 
-               right (.-offsetWidth @op-toggle)]
-           [:div {:class (compose (s/options-menu top right) (if @button-active (s/options-menu-active)))}
-            (doall (for [elem [{:content "Log Out" :key "log-out"
-                                :click (fn [] (println "Log Out"))}]]
-                     [:div {:key (str "options-" (elem :key))
-                            :class (compose (s/menu-li))
-                            :on-click (elem :click)}
-                      (elem :content)]))])]))))
+  (defn options-menu [button-active op-toggle]
+    (let [manage-lib-state (r/atom {:mounted true})]
+      (fn [button-active op-toggle]
+        (when (-> @op-toggle
+                 nil?
+                 not)
+          [:div
+           [full-screen-backdrop button-active 98]
+           (let [top   (.-offsetHeight @op-toggle) 
+                 right (.-offsetWidth @op-toggle)]
+             [:div {:class (compose (s/options-menu top right) (if @button-active (s/options-menu-active)))}
+              (doall (for [elem [{:content "Log Out" :key "log-out"
+                                  :click (fn [] (println "Log Out"))}]]
+                       [:div {:key (str "options-" (elem :key))
+                              :class (compose (s/menu-li))
+                              :on-click (elem :click)}
+                        (elem :content)]))])]))))
 
-(defn options-toggle []
-  (let [button-active (r/atom false)
-        op-toggle (r/atom nil)]
-    (fn []
-      [:div {:id "options-toggle"
-             :ref #(reset! op-toggle %)
-             :class (compose  (s/right))
-             :on-click #(toggle-visibility! button-active)}
-       [:button {:class (compose (s/navbar-toggle navbar-height))}
-        [:span {:class (s/sr-only)} "Options"]
-        [:i {:class (compose (if @button-active (s/color-on-active s/secondary))
-                             (s/toggle) (s/circle-bounding) "la la-ellipsis-v")}]]
-       [options-menu button-active op-toggle]])))
+  (defn options-toggle []
+    (let [button-active (r/atom false)
+          op-toggle (r/atom nil)]
+      (fn []
+        [:div {:id "options-toggle"
+               :ref #(reset! op-toggle %)
+               :class (compose  (s/right))
+               :on-click #(toggle-visibility! button-active)}
+         [:button {:class (compose (s/navbar-toggle navbar-height))}
+          [:span {:class (s/sr-only)} "Options"]
+          [:i {:class (compose (if @button-active (s/color-on-active s/secondary))
+                               (s/toggle) (s/circle-bounding) "la la-ellipsis-v")}]]
+         [options-menu button-active op-toggle]])))
 
 (defn navbar
   "Creates a navigation bar"
@@ -240,7 +263,8 @@
       ;; toggle
       (case (@data/sidebar-toggle-function :function)
         toggle [sidebar-toggle]
-        back   [back-toggle (@data/sidebar-toggle-function :dest)]
+        back   (let [{dest :dest title :title} @data/sidebar-toggle-function]
+                 [back-toggle dest title])
         ;; default
         [sidebar-toggle])
       ;; logo
@@ -255,33 +279,49 @@
       [options-toggle]]]))
 
 
-(defn settings []
-  (reset! data/sidebar-toggle-function {:function 'toggle})
-  (fn []
-    [padded-div
-     {:class (compose (s/settings))}
-     (doall
-      (for [setting data/settings]
-        [:div {:key (setting :name)}
-         [:div {:class (compose (s/setting))
-               :on-click (fn [] (set-active! (setting :set-active)))}
-          (setting :name)]
-         [:hr {:class (s/hr)}]]))]))
+  (defn settings []
+    (reset! data/sidebar-toggle-function {:function 'toggle})
+    (fn []
+      [padded-div
+       {:class (compose (s/settings))}
+       (doall
+        (for [setting data/settings]
+          [:div {:key (setting :name)}
+           [:div {:class (compose (s/setting))
+                  :on-click (fn [] (set-active! (setting :set-active)))}
+            (setting :name)]
+           [:hr {:class (s/hr)}]]))]))
 
-(defn player []
-  [:audio {:id "player-html5"}])
+  (defn player [state]
+    (fn [state]
+      [:div {:class (s/player)}
+       [:div {:class (compose)}
+        [:div {:class (compose (s/player-slider))}]
+        [:button {:title "Previous" :class (compose (s/no-select) (s/circle-bounding) (s/player-button) "la la-fast-backward")}]
+        [:button {:title "Play" :class (compose (s/no-select) (s/circle-bounding) (s/player-button) (s/player-play-button) "la"
+                                                (if (@state :playing) "la-pause" "la-play"))
+                  :on-click (fn [] (swap! state update :playing not))}]
+        [:button {:title "Previous" :class (compose (s/no-select) (s/circle-bounding) (s/player-button) "la la-fast-forward")}]]
+       [:audio {:id "player-html5"}]]))
 
-(defn base []
-  [:div {:class (s/roboto-font)}
-   [navbar]
-   [sidebar]
-   (case @data/active
-     :random     [random]
-     :artists    [artists]
-     :albums     [albums]
-     :settings   [settings]
-     :manage-lib [manage-library-menu data/manage-library]
-     ;; default
-     [random])
-   [player]])
+  (defn base []
+    [:div {:class (s/futura-font)}
+     [navbar]
+     [sidebar]
+     (case @data/active
+       ;; listening
+       :random     [random]
+       :artists    [artists]
+       :albums     [albums]
+
+       ;; settings
+       :settings   [settings]
+       :manage-lib [manage-library-menu data/manage-library]
+
+       ;; default
+       [random])
+
+     ;; player
+     (when (@data/player :playing)
+       [player data/player])])
 

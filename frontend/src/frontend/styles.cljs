@@ -1,10 +1,12 @@
 (ns frontend.styles
   (:require [clojure.string :refer [join]]
-            [cljss.core :as css :refer-macros [defstyles defkeyframes]]
+            [cljss.core :as css :refer-macros [defstyles defkeyframes inject-global]]
             [cljss.reagent :refer-macros [defstyled]]))
 
 (defn compose [& styles]
   (join " " styles))
+
+(def list-font-size "16px")
 
 (def primary      "#4527a0")
 (def p-light      "#7953d2")
@@ -15,6 +17,7 @@
 
 (def white        "#ffffff")
 (def highlighted  "#e8e8e8")
+(def shadow-color "#c0c0c0")
 (def black        "#000000")
 
 (def green         "#4caf50")
@@ -27,8 +30,8 @@
 (def bg-primary {:background-color primary :color white})
 (def bg-secondary {:background-color secondary :color white})
 
-(defstyles roboto-font []
-  {:font-family "Roboto, sans-serif"})
+(defstyles futura-font []
+  {:font-family "Futura, sans-serif"})
 
 (defstyles pad-in-start [padding]
   {:padding-left (str padding "px")})
@@ -124,7 +127,7 @@
    :background-color white
    :transition "left 0.5s"
    :overflow-x "hidden"
-   :box-shadow "1px 0px 3px 0px #c0c0c0"
+   :box-shadow (str "1px 0px 3px 0px " shadow-color)
    :z-index "1001"})
 
 (defstyles sidebar-open []
@@ -133,7 +136,7 @@
 
 (defstyles sidebar-ul []
   {:padding-inline-start "0px"
-   :font-size "18px"
+   :font-size list-font-size
    :margin-top "0px"
    :margin-bottom "0px"
    :list-style-type "none"})
@@ -146,7 +149,7 @@
   {:background-color highlighted})
 
 (defstyles sidebar-li-icon []
-  {:font-size "18px"})
+  {:font-size list-font-size})
 
 (defstyles sidebar-li-a []
   {})
@@ -176,10 +179,9 @@
    :display "inline-block"
    :position "relative"
    :margin "8px"
-   :box-shadow "2px 2px 4px 1px #c0c0c0"
+   :box-shadow (str "2px 2px 4px 1px " shadow-color)
    :visibility "visible"
-   :cursor "pointer"
-   })
+   :cursor "pointer"})
 
 (defstyles album-inside []
   {})
@@ -261,7 +263,7 @@
    :background-color white
    :border-radius "2px"
    :color black
-   :box-shadow "1px 0px 3px 0px #c0c0c0"
+   :box-shadow (str "1px 0px 3px 0px " shadow-color)
    :transition "visibility 0.1s, opacity 0.1s ease-in-out"
    :&:hover {:background-color highlighted}
    :top "16px"
@@ -272,7 +274,7 @@
    :opacity "1"})
 
 (defstyles context-menu-shadow []
-  {:box-shadow "2px 2px 4px 2px #c0c0c0a0"})
+  {:box-shadow (str "2px 2px 4px 2px " shadow-color)})
 
 (defstyles manage-library-menu [width height z-index]
   {:max-height "40%"
@@ -309,6 +311,12 @@
    :border-width "1px"
    :border-radius "4px"
    :font-size "16px"
+   :&::-webkit-scrollbar {:background-color shadow-color
+                          :border-radius "4px"
+                          :height "6px"
+                          :width  "1px"
+                          :&:active {:background-color "#e0e0e0"}
+                          }
    :cursor "auto"
    :overflow "auto"
    :text-align "left"})
@@ -318,9 +326,41 @@
 
 (defstyles settings []
   {:text-align "center"
-   :font-size "16px"})
+   :font-size list-font-size})
 
 (defstyles setting []
   {:padding "16px 0"
    :cursor "pointer"
    :&:hover {:background-color highlighted}})
+
+(defstyles player []
+  {:position "fixed"
+   :bottom "0"
+   :width "100%"
+   :height "100px"
+   :text-align "center"
+   :box-shadow (str "0px -1px 2px 2px " "#d0d0d0")
+   :z-index "10000"
+   :background-color white})
+
+(defstyles player-slider []
+  {:width "100%"
+   :height "16px"})
+
+(defstyles player-play-button []
+  {:padding "12px"
+   :font-size "32px"
+   :background-color p-light
+   :color s-light
+   })
+
+(defstyles player-button []
+  {:cursor "pointer"
+   :padding "8px"
+   :outline "none"
+   :vertical-align "middle"
+   :font-size "20px"
+   :background-color s-light
+   :color p-dark
+   :border "none"
+   :margin "0 8px"})
