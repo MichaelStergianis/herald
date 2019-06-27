@@ -601,10 +601,12 @@ func TestUpdate(t *testing.T) {
 		where        interface{}
 		expErr       error
 		answerLookup interface{}
+		rowsAffected int64
 		answer       []interface{}
 	}{
 		{"update first song", Song{Title: "My Knight"}, Song{ID: 1}, nil,
 			Song{ID: 1},
+			1,
 			[]interface{}{
 				Song{ID: 1, Album: NullInt64{sql.NullInt64{1, true}},
 					Genre: NullInt64{sql.NullInt64{1, true}},
@@ -620,6 +622,7 @@ func TestUpdate(t *testing.T) {
 		{"update multiple fields", Song{NumTracks: NewNullInt64(20), Track: NewNullInt64(4)},
 			Song{Size: 91841, Genre: NewNullInt64(1)}, nil,
 			Song{Size: 91841, Genre: NewNullInt64(1)},
+			1,
 			[]interface{}{
 				Song{ID: 6, Album: NullInt64{sql.NullInt64{1, true}},
 					Genre: NullInt64{sql.NullInt64{1, true}},
@@ -635,6 +638,7 @@ func TestUpdate(t *testing.T) {
 		{"update multiple songs' artist using artist as query", Song{Artist: NewNullString("BED BED NUT GUD")},
 			Song{Artist: NewNullString("BADBADNOTGOOD")}, nil,
 			Song{Artist: NewNullString("BED BED NUT GUD")},
+			3,
 			[]interface{}{
 				Song{ID: 1, Album: NullInt64{sql.NullInt64{1, true}},
 					Genre: NullInt64{sql.NullInt64{1, true}},
@@ -670,10 +674,15 @@ func TestUpdate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			prepareDB()
 
-			err := wdb.Update(test.set, test.where)
+			rowsAffected, err := wdb.Update(test.set, test.where)
 			if test.expErr != err {
 				t.Errorf("expected error did not match received\n\texpected: %v\n\treceived: %v",
 					test.expErr, err)
+			}
+
+			if test.rowsAffected != rowsAffected {
+				t.Errorf("unexpected number of rows updated.\n\texpected: %v\n\treceived: %v",
+					test.rowsAffected, rowsAffected)
 			}
 
 			result, err := wdb.Read(test.answerLookup, []string{})
@@ -684,8 +693,8 @@ func TestUpdate(t *testing.T) {
 
 			for i := range result {
 				if result[i] != test.answer[i] {
-					t.Errorf("result %d did not match answer\n\tresult: %v\n\tanswer: %v\n",
-						i, result[i], test.answer[i])
+					t.Errorf("result %d did not match answer\n\texpected: %v\n\treceived: %v\n",
+						i, test.answer[i], result[i])
 				}
 			}
 		})

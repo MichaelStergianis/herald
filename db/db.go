@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -64,7 +63,7 @@ func duration(song Song) (d float64, err error) {
 	}
 
 	// parse the stderr of ffprobe
-	query := "Duration: ([0-9]{2}):([0-9]{2}):([0-9]{2})[.]([0-9]{1,})"
+	query := "Duration: ([0-9]{2}):([0-9]{2}):([0-9]{2})([.][0-9]+)"
 	re, err := regexp.Compile(query)
 	if err != nil {
 		return d, err
@@ -84,9 +83,12 @@ func duration(song Song) (d float64, err error) {
 		}
 	}
 
-	decimals := math.Pow(10, -math.Ceil(math.Log10(timings[3])))
+	const (
+		secondsInMinute = 60
+		secondsInHour   = 3600
+	)
 
-	d = timings[0]*3600 + timings[1]*60 + timings[2] + timings[3]*decimals
+	d = timings[0]*secondsInHour + timings[1]*secondsInMinute + timings[2] + timings[3]
 
 	return d, nil
 }
@@ -354,8 +356,6 @@ func (wdb *WarblerDB) songInLibrary(song Song, library Library) (inLib bool, err
 
 	return inLib, nil
 }
-
-// TODO GetTypeInLibrary ...
 
 // GetSongsInLibrary ...
 func (wdb *WarblerDB) GetSongsInLibrary(lib Library) (songs []Song, err error) {
@@ -900,7 +900,7 @@ func whereString(statementNum int, where reflect.Value) (int, string, []interfac
 }
 
 // Update ...
-func (wdb *WarblerDB) Update(set, where interface{}) (err error) {
+func (wdb *WarblerDB) Update(set, where interface{}) (rowsAffected int64, err error) {
 	// UPDATE schema.table SET [using `set`] WHERE [using `where`]
 	rSet, rWhere := reflect.ValueOf(set), reflect.ValueOf(where)
 	if rSet.Kind() == reflect.Ptr {
@@ -910,12 +910,12 @@ func (wdb *WarblerDB) Update(set, where interface{}) (err error) {
 		rWhere = rWhere.Elem()
 	}
 	if rSet.Type() != rWhere.Type() {
-		return ErrTypeMismatch
+		return rowsAffected, ErrTypeMismatch
 	}
 
 	tableName, ok := GetTableFromType(where)
 	if !ok {
-		return ErrInvalidTable
+		return rowsAffected, ErrInvalidTable
 	}
 
 	updateStr := "UPDATE " + tableName
@@ -930,12 +930,17 @@ func (wdb *WarblerDB) Update(set, where interface{}) (err error) {
 
 	stmt, err := wdb.Prepare(query)
 	if err != nil {
-		return err
+		return
 	}
-	_, err = stmt.Exec(vals...)
+	res, err := stmt.Exec(vals...)
 	if err != nil {
-		return err
+		return
 	}
 
-	return nil
+	rowsAffected, err = res.RowsAffected()
+	if err != nil {
+		return
+	}
+
+	return
 }
