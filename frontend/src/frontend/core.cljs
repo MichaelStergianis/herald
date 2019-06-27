@@ -28,7 +28,7 @@
     true))
 
 (defn -main []
-    (render!))
+  (render!))
 
 (defn ^:after-load on-js-reload []
   (css/remove-styles!)
