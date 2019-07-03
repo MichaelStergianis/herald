@@ -226,9 +226,10 @@ func (wdb *WarblerDB) processMedia(fsPath string, lib Library) (err error) {
 	}
 
 	s := &Song{
-		Path:  fsPath,
-		Title: metadata.Title(),
-		Size:  stats.Size(),
+		Path:   fsPath,
+		Title:  metadata.Title(),
+		Size:   stats.Size(),
+		Artist: NewNullString(metadata.Artist()),
 	}
 
 	// Check to see if the song is in the database

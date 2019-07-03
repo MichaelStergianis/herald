@@ -289,7 +289,7 @@ func TestScanLibrary(t *testing.T) {
 		NumTracks: NullInt64{NullInt64: sql.NullInt64{1, true}},
 		Disk:      NullInt64{NullInt64: sql.NullInt64{0, false}},
 		NumDisks:  NullInt64{NullInt64: sql.NullInt64{0, false}},
-		Artist:    NullString{NullString: sql.NullString{"", false}}}
+		Artist:    NullString{NullString: sql.NullString{"Simpsons", true}}}
 
 	if songs[0] != expectedSong {
 		t.Errorf("unexpected song parsed\n\texpected: %v\n\tresult: %v\n", expectedSong, songs[0])
