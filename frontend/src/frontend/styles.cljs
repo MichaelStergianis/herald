@@ -30,6 +30,8 @@
 (def bg-primary {:background-color primary :color white})
 (def bg-secondary {:background-color secondary :color white})
 
+(def player-height "auto")
+
 (defstyles futura-font []
   {:font-family "Futura, sans-serif"})
 
@@ -50,6 +52,9 @@
 
 (defstyles margin [margin]
   {:margin margin})
+
+(defstyles font-size [fs]
+  {:font-size (str fs "px")})
 
 (defstyles display [display]
   {:display display})
@@ -171,6 +176,38 @@
    :position "absolute"
    :width "1px"
    :word-wrap "normal !important"})
+
+(defstyles songs-filter [top]
+  {:position "fixed"
+   :width "100%"
+   :top (str top "px")
+   :left "0"
+   :background-color "white"
+   :padding "8px"
+   :padding-left "16px"})
+
+(defstyles songs-filter-text []
+  {:display "inline"
+   :padding-right "8px"})
+
+(defstyles songs-filter-input []
+  {:display "inline"
+   :font-size "16px"})
+
+(defstyles songs-area []
+  {:margin-top "32px"})
+
+(defstyles song []
+  {:margin "0 8px"
+   :padding-top "16px"
+   :cursor "pointer"
+   :padding-bottom "0"
+   :text-align "left"
+   :&:hover {:background-color highlighted}})
+
+(defstyles song-element []
+  {:display "block"
+   :margin "auto"})
 
 (defstyles album [wh padding]
   {:width  (str wh "px")
@@ -315,8 +352,7 @@
                           :border-radius "4px"
                           :height "6px"
                           :width  "1px"
-                          :&:active {:background-color "#e0e0e0"}
-                          }
+                          :&:active {:background-color "#e0e0e0"}}
    :cursor "auto"
    :overflow "auto"
    :text-align "left"})
@@ -335,24 +371,82 @@
 
 (defstyles player []
   {:position "fixed"
+   :padding "0 16px"
    :bottom "0"
-   :width "100%"
-   :height "100px"
+   :width "calc(100% - 32px)"
+   :height player-height
    :text-align "center"
    :box-shadow (str "0px -1px 2px 2px " "#d0d0d0")
    :z-index "10000"
    :background-color white})
 
+(defstyles player-handle-area []
+  {:position "relative"
+   :padding-bottom "4px"
+   :width "100%"
+   :display "flex"
+   :justify-content "center"})
+
+(defstyles player-handle []
+  {:width "64px"
+   :height "4px"
+   :cursor "pointer"
+   :border-radius "2px"
+   :background-color "#b0b0b0"})
+
+(defstyles player-slider-area []
+  {:position "relative"
+   :margin "auto"
+   :width "100%"
+   :height "24px"
+   :cursor "pointer"})
+
 (defstyles player-slider []
-  {:width "100%"
-   :height "16px"})
+  {:position "relative"
+   :border-radius "2px"
+   :margin "auto"
+   :height "6px"
+   :top "9px"
+   :background-color highlighted})
+
+(defstyles playing-stats []
+  {:display "grid"
+   :grid-template-columns "64px auto 64px"})
+
+(defstyles player-slider-time []
+  {:margin "auto"})
+
+(defn compute-slider-left [play-position duration]
+  (let [p (* 100 (/ play-position duration))]
+    (str p "%")))
+
+(defstyles played-slider []
+  {:position "relative"
+   :border-radius "2px 0 0 2px"
+   :top "3px"
+   :height "6px"
+   :background-color p-light})
+
+(defstyles player-cursor []
+  {:position "absolute"
+   :width "4px"
+   :height "16px"
+   :border-radius "2px"
+   :top "4px"
+   :background-color primary})
+
+(defstyles player-bottom-area []
+  {:padding "8px 0"
+   :vertical-align "middle"})
+
+(defstyles player-control-area []
+  {:float "left"})
 
 (defstyles player-play-button []
   {:padding "12px"
    :font-size "32px"
    :background-color p-light
-   :color s-light
-   })
+   :color white})
 
 (defstyles player-button []
   {:cursor "pointer"
@@ -361,6 +455,31 @@
    :vertical-align "middle"
    :font-size "20px"
    :background-color s-light
-   :color p-dark
+   :color black
    :border "none"
    :margin "0 8px"})
+
+(defstyles player-info-area []
+  {:display "inline-block"})
+
+(defstyles player-volume-area []
+  {:margin "auto 0"})
+
+(defstyles player-volume-slider [height]
+  {:-webkit-appearance "none"
+   :appearance "none"
+   :background-color highlighted
+   :outline "none"
+   :height (str height "px")
+   :border-radius "2px"
+   :&::-webkit-slider-thumb {:-webkit-appearance "none"
+                             :height "16px"
+                             :background-color primary
+                             :width "4px"
+                             :border-radius "2px"}
+   :&::-moz-range-thumb {:height "16px"
+                         :background-color primary
+                         :border-radius "2px"
+                         :border-width "0"
+                         :outline "none"
+                         :width "4px"}})

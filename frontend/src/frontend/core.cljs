@@ -18,6 +18,13 @@
       (viewport-fn)
       (.addEventListener js/window "resize" viewport-fn))
 
+    (.addEventListener js/window "keypress"
+                       (fn [e]
+                         (let [k (-> e .-charCode)]
+                           (when (and (= k 32) (@data/player :playing) (.-preventDefault e))
+                             (.preventDefault e)
+                             (swap! data/player update :paused not)))))
+
     (.appendChild (.-head js/document)
                   (let [meta-elem (.createElement js/document "meta")]
                     (.setAttribute meta-elem "name" "theme-color")

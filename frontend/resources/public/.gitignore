@@ -1,1 +1,4 @@
 cljs-out/
+
+# ignore futura
+css/fonts/futura/
