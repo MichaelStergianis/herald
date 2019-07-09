@@ -2,6 +2,8 @@
   (:require [reagent.core :as r]))
 
 (defonce viewport-dims (r/atom []))
+(defonce scroll-position (r/atom 0))
+
 (defonce active (r/atom :random))
 (defonce libraries (r/atom (vector)))
 (defonce songs (r/atom (vector)))

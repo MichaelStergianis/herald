@@ -1,7 +1,5 @@
 (ns frontend.ui
-  (:require [goog.string :as gstring]
-            [goog.string.format]
-            [reagent.core :as r]
+  (:require [reagent.core :as r]
             [reagent.dom :refer [dom-node]]
             [ajax.core :refer [GET]]
             [clojure.string :refer [lower-case]]
@@ -9,6 +7,7 @@
             [frontend.styles :as s :refer [compose]]
             [frontend.util     :as util :refer [by-id]]
             [frontend.requests :as req]
+            [frontend.player :refer [player]]
             [frontend.player :as player]
             [frontend.data     :as data]))
 
@@ -29,8 +28,9 @@
 
 (defstyled padded-div :div
   {:margin-top (str total-navbar-height "px")
-   :margin-bottom (str (when @data/player-html
-                         (.-offsetHeight @data/player-html)) "px")
+   :margin-bottom (str (if @data/player-html
+                         (.-offsetHeight @data/player-html)
+                         0) "px")
    :padding "8px"
    :height "100%"})
 
@@ -58,22 +58,33 @@
     (fn []
       [padded-div "Random"])))
 
+
+(defn media-options [filter-field]
+  (fn [filter-field]
+    [:div {:class (compose (s/media-options total-navbar-height) (when (< 0 @data/scroll-position) (s/media-options-scrolled)))}
+     ;; filter
+     [:div {:class (compose (s/media-options-elems) (s/media-filter-text))} "Filter"]
+     [:input {:type "text"
+              :on-key-press prevent-play-pause
+              :class (compose (s/media-options-elems) (s/media-filter-input))
+              :on-change (fn [e] (reset! filter-field (-> e .-target .-value)))}]
+     ;; sort
+     [:div {:class (s/media-options-elems)} "Sort By"]
+     [:input {:type "radio" :class (s/display "inline")}]]))
+
 (defn songs []
   (let [orderby "title"]
     (req/get-all "song" data/songs orderby))
   (let [filter-field (r/atom "")]
     (fn []
       [padded-div {:id "songs"}
-       [:div {:class (compose (s/songs-filter total-navbar-height))}
-        [:div {:class (compose (s/songs-filter-text))} "Filter"]
-        [:input {:type "text"
-                 :on-key-press prevent-play-pause
-                 :class (compose (s/songs-filter-input))
-                 :on-change (fn [e] (reset! filter-field (-> e .-target .-value)))}]]
+       [media-options filter-field]
        [:div {:class (compose (s/songs-area))}
         (doall
-        (for [song (let [filter-re-fn (fn [field m] (re-matches (re-pattern (str ".*" @filter-field ".*")) (clojure.string/lower-case (m field))))]
-                     (filter #(or ((partial filter-re-fn :title) %) ((partial filter-re-fn :artist) %)) @data/songs))]
+         (for [song (let [filter-re-fn (fn [field m] (re-matches
+                                                     (re-pattern (str ".*" (clojure.string/lower-case @filter-field) ".*"))
+                                                     (clojure.string/lower-case (m field))))]
+                      (filter #(or ((partial filter-re-fn :title) %) ((partial filter-re-fn :artist) %)) @data/songs))]
          [:div {:key (song :id)
                 :class (s/song)
                 :on-click (fn [] (player/play-song! (song :id)))}
@@ -328,89 +339,6 @@
                 :on-click (fn [] (set-active! (setting :set-active)))}
           (setting :name)]
          [:hr {:class (s/hr)}]]))]))
-
-(defn player [state]
-  (let [player-id (gensym "player_")
-        seek-area (r/atom nil)]
-    (fn [state]
-      ;; handle
-      [:div {:class (s/player)
-             :ref #(reset! data/player-html %)}
-       [:div {:class (s/player-handle-area)}
-        [:div {:class (s/player-handle)
-               :on-click (fn [] (println "handle clicked"))}]]
-
-       ;; play position
-       (let [audio (@state :audio)
-             play-position (if (nil? audio) 0 (.-currentTime audio))
-             duration      (if (nil? audio) 100 (.-duration audio))
-             format-time (fn [t d]
-                           (let [h (/ t 3600)
-                                 m (/ t 60)
-                                 s (rem t 60)
-                                 dh (/ d 3600)
-                                 dm (/ d 60)]
-                             (str
-                              (if (> dh 1) (gstring/format "%02d:" h))
-                              (if (> dm 1) (gstring/format "%02d:" m) "00:")
-                              (gstring/format "%02d" s))))]
-         [:div {:class (compose (s/playing-stats))}
-          [:div {:class (compose (s/player-slider-time))} (format-time play-position duration)]
-          [:div {:class (compose (s/player-slider-area) (s/no-select))
-                 :ref #(reset! seek-area %)
-                 :on-click (fn [e] (if-let [sa @seek-area]
-                                    (let [w (.-offsetWidth sa)
-                                          l (.-offsetLeft sa)
-                                          click-loc (-> e .-clientX)
-                                          percent (/ (- click-loc l) w)
-                                          time (* percent (.-duration (@state :audio)))]
-                                      (set! (-> (@state :audio) .-currentTime) time))))}
-           [:div {:class (compose (s/player-slider))}]
-           [:div {:class (compose (s/played-slider)) :style {:width (str (* 100 (/ play-position duration)) "%")}}]
-           [:div {:class (compose (s/player-cursor)) :style {:left  (str (* 100 (/ play-position duration)) "%")}}]]
-          [:div {:class (compose (s/player-slider-time))} (format-time duration duration)]])
-
-       [:div {:class (compose (s/player-bottom-area))}
-
-        ;; controls
-        [:div {:class (compose (s/player-control-area))}
-         [:button {:title "Previous" :class (compose (s/no-select) (s/circle-bounding)
-                                                     (s/player-button) "la la-fast-backward")
-                   :on-click (fn [] nil)}]
-         [:button {:title "Play" :class (compose (s/no-select) (s/circle-bounding)
-                                                 (s/player-button) (s/player-play-button) "la"
-                                                 (if (@state :paused) "la-play" "la-pause"))
-                   :on-click (fn []  (swap! state update :paused not))
-                   :on-key-press (fn [e] (if (and (= data/space-char (-> e .-charCode)) (.-stopPropagation e)) (.stopPropagation e)))}]
-         [:button {:title "Previous" :class (compose (s/no-select) (s/circle-bounding)
-                                                     (s/player-button) "la la-fast-forward")
-                   :on-click (fn [] )}]]
-        
-        ;; info area
-        [:div {:class (compose (s/player-info-area))}
-         [:div (get-in @state [:song :title])]
-         [:div (get-in @state [:album :title])]
-         [:div (get-in @state [:artist :name])]]
-        
-        ;; volume
-        [:div {:class (compose (s/right) (s/player-volume-area))}
-         [:input {:type "range" :min "0" :max "1" :step "0.001" :value @data/volume
-                  :class (compose (s/player-volume-slider 6))
-                  :on-change (fn [e] (let [v (-> e .-target .-value)]
-                                      (when (-> @state :audio nil? not)
-                                        (set! (-> @state :audio .-volume) v))
-                                      (reset! data/volume v)))}]]]
-
-       ;; audio element
-       (if-let [song-id (get-in @state [:song :id])]
-         (let [src (str "/edn/stream/" song-id)]
-           (when (@state :audio)
-             (if (@state :paused) 
-               (.pause (@state :audio))
-               (.play (@state :audio))))
-           [:audio {:id player-id :volume @data/volume
-                  :ref #(swap! state assoc :audio %)
-                  :autoPlay (not (@state :paused)) :src src}]))])))
 
 (defn base []
   [:div {:class (s/futura-font)}

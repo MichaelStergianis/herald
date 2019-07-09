@@ -18,6 +18,10 @@
       (viewport-fn)
       (.addEventListener js/window "resize" viewport-fn))
 
+    (.addEventListener js/window "scroll"
+                       (fn [e]
+                         (reset! data/scroll-position (.-scrollTop (aget (.getElementsByTagName js/document "html") 0)))))
+
     (.addEventListener js/window "keypress"
                        (fn [e]
                          (let [k (-> e .-charCode)]

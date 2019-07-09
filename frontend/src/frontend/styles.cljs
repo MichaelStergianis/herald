@@ -15,10 +15,11 @@
 (def s-light      "#e6ceff")
 (def s-dark       "#836fa9")
 
-(def white        "#ffffff")
-(def highlighted  "#e8e8e8")
-(def shadow-color "#c0c0c0")
-(def black        "#000000")
+(def white            "#ffffff")
+(def highlighted      "#e8e8e8")
+(def highlighted-dark "#d0d0d0")
+(def shadow-color     "#c0c0c0")
+(def black            "#000000")
 
 (def green         "#4caf50")
 (def border-green  "#1b5e20")
@@ -177,21 +178,31 @@
    :width "1px"
    :word-wrap "normal !important"})
 
-(defstyles songs-filter [top]
-  {:position "fixed"
+(defstyles media-options [top]
+  {:display "inline"
+   :position "fixed"
    :width "100%"
+   :box-shadow "none"
    :top (str top "px")
+   :transition "box-shadow .3s ease-in-out"
    :left "0"
    :background-color "white"
    :padding "8px"
    :padding-left "16px"})
 
-(defstyles songs-filter-text []
-  {:display "inline"
-   :padding-right "8px"})
+(defstyles media-options-scrolled []
+  {:box-shadow (str "2px 2px 4px 1px " shadow-color)})
 
-(defstyles songs-filter-input []
+(defstyles media-options-elems []
   {:display "inline"
+   :margin-right "8px"})
+
+(defstyles media-filter-text []
+  {})
+
+(defstyles media-filter-input []
+  {:display "inline"
+   :margin-right "8px"
    :font-size "16px"})
 
 (defstyles songs-area []
@@ -394,20 +405,6 @@
    :border-radius "2px"
    :background-color "#b0b0b0"})
 
-(defstyles player-slider-area []
-  {:position "relative"
-   :margin "auto"
-   :width "100%"
-   :height "24px"
-   :cursor "pointer"})
-
-(defstyles player-slider []
-  {:position "relative"
-   :border-radius "2px"
-   :margin "auto"
-   :height "6px"
-   :top "9px"
-   :background-color highlighted})
 
 (defstyles playing-stats []
   {:display "grid"
@@ -420,15 +417,41 @@
   (let [p (* 100 (/ play-position duration))]
     (str p "%")))
 
-(defstyles played-slider []
+(defstyles player-slider-area []
   {:position "relative"
+   :margin "auto"
+   :width "100%"
+   :height "24px"
+   :cursor "pointer"})
+
+(defstyles player-slider []
+  {:position "absolute"
+   :z-index "1"
+   :border-radius "2px"
+   :margin "auto"
+   :width "100%"
+   :height "6px"
+   :top "9px"
+   :background-color highlighted})
+
+(defstyles buffered-slider []
+  {:position "absolute"
+   :z-index "2"
+   :top "9px"
+   :height "6px"
+   :background-color highlighted-dark})
+
+(defstyles played-slider []
+  {:position "absolute"
    :border-radius "2px 0 0 2px"
-   :top "3px"
+   :z-index "3"
+   :top "9px"
    :height "6px"
    :background-color p-light})
 
 (defstyles player-cursor []
   {:position "absolute"
+   :z-index "4"
    :width "4px"
    :height "16px"
    :border-radius "2px"
