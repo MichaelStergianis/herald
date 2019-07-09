@@ -391,7 +391,9 @@ func (serv *server) newStreamRoute(enc encoder) http.HandlerFunc {
 			return
 		}
 
-		// serve content supports ranged headers
-		http.ServeContent(w, r, song.Path, unixEpoch, f)
+		// ServeContent supports ranged headers. This is a modified
+		// net/http.ServeContent taken directly from source at
+		// version 1.12.6 you can read the source at content.go
+		ServeContent(w, r, song.Path, unixEpoch, f)
 	}
 }
