@@ -15,7 +15,15 @@ import (
 )
 
 const (
-	defaultTransfer = 4096
+	_        = iota
+	kb int64 = 1 << (10 * iota)
+	mb
+	gb
+	tb
+)
+
+const (
+	defaultTransfer = 64 * kb
 	sniffLen        = 512
 )
 

@@ -5,3 +5,4 @@
 flymd.*
 
 coverage.out
+/go.sum

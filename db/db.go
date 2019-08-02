@@ -23,6 +23,8 @@ import (
 	ft "gopkg.in/h2non/filetype.v1"
 )
 
+// TODO: fix update of library to delete old items on update.
+
 // WarblerDB ...
 // A type for interfacing with the warbler db
 type WarblerDB struct {
