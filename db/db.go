@@ -20,7 +20,7 @@ import (
 	// pq is used behind the scenes, but never explicitly used
 	_ "github.com/lib/pq"
 
-	ft "gopkg.in/h2non/filetype.v1"
+	ft "github.com/h2non/filetype"
 )
 
 // TODO: fix update of library to delete old items on update.
