@@ -57,7 +57,7 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	serv, err := newServer("dbname=warbler user=warbler sslmode=disable")
+	serv, err := newServer("host=172.17.0.1 dbname=warbler user=warbler sslmode=disable")
 	check(err)
 	defer serv.wdb.Close()
 
