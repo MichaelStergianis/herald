@@ -34,6 +34,7 @@ RUN apk update
 RUN apk add ca-certificates
 RUN rm -rf /var/cache/apk/*
 RUN apk add postgresql-client
+RUN apk add ffmpeg
 WORKDIR /app
 COPY --from=build-env /app/warbler /app/
 COPY --from=frontend-env /app/resources/public /app/frontend/resources/public
