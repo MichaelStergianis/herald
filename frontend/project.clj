@@ -1,4 +1,4 @@
-(defproject frontend "0.1.0-SNAPSHOT"
+(defproject frontend "v0.0.1a"
   :description "Music server frontend"
   :url "http://music.stergianis.ca"
   :license {:name "GPL V2.0"
