@@ -1,7 +1,7 @@
 (ns frontend.styles
-  (:require [clojure.string :refer [join]]
-            [cljss.core :as css :refer-macros [defstyles defkeyframes inject-global]]
-            [cljss.reagent :refer-macros [defstyled]]))
+  (:require [cljss.core :as css :refer-macros [defstyles defkeyframes inject-global]]
+            [cljss.reagent :refer-macros [defstyled]]
+            [clojure.string :refer [join]]))
 
 (defn compose [& styles]
   (join " " styles))
@@ -47,12 +47,14 @@
          :-ms-user-select "none" #_(Internet Explorer/Edge)
              :user-select "none" #_(Chrome and Opera)})
 
-
 (defstyles border [style]
   {:border-style style})
 
 (defstyles margin [margin]
   {:margin margin})
+
+(defstyles margin-botom [mb]
+  {:margin-bottom (str mb "px")})
 
 (defstyles font-size [fs]
   {:font-size (str fs "px")})
@@ -62,6 +64,9 @@
 
 (defstyles vertical-align [align]
   {:vertical-align align})
+
+(defstyles fg [color]
+  {:color color})
 
 (defstyles bg [color border-color]
   {:background-color color
@@ -334,7 +339,7 @@
 
 (defstyles manage-library-row [buttons]
   {:display "grid"
-   :grid-template-columns (clojure.string/join " " (concat '("25% auto") (repeat buttons "40px")))
+   :grid-template-columns (join " " (concat '("25% auto") (repeat buttons "40px")))
    :grid-column-gap "4px"
    :height "40px"
    :padding "4px 0"
@@ -395,16 +400,31 @@
   {:position "relative"
    :padding-bottom "4px"
    :width "100%"
-   :display "flex"
-   :justify-content "center"})
+   :display "block"})
+
+(defstyles player-handle-info []
+  {:overflow "hidden"
+   :max-height "0"})
+
+(defstyles player-handle-info-active []
+  {:max-height "100%"})
 
 (defstyles player-handle []
-  {:width "64px"
+  {:display "flex"
+   ;; :*:order [:margin :margin-bottom]
+   :margin "auto"
+   :justify-content "center"
+   :width "64px"
    :height "4px"
    :cursor "pointer"
    :border-radius "2px"
    :background-color "#b0b0b0"})
 
+(defstyles player-handle-elem [width]
+  {:display "grid"
+   :width "100%"
+   :grid-template-columns (join " " (concat '("40px") (repeat 4 (str (/ (- width 40) 4) "px"))))
+   :text-align "left"})
 
 (defstyles playing-stats []
   {:display "grid"

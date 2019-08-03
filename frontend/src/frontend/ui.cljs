@@ -1,11 +1,12 @@
 (ns frontend.ui
   (:require [reagent.core :as r]
             [reagent.dom :refer [dom-node]]
+            [clojure.core.async :refer [<! >! chan go]]
             [ajax.core :refer [GET]]
             [clojure.string :refer [lower-case]]
             [cljss.reagent :refer-macros [defstyled]]
             [frontend.styles :as s :refer [compose]]
-            [frontend.util     :as util :refer [by-id]]
+            [frontend.util     :as u :refer [by-id]]
             [frontend.requests :as req]
             [frontend.player :refer [player]]
             [frontend.player :as player]
@@ -72,25 +73,41 @@
      [:div {:class (s/media-options-elems)} "Sort By"]
      [:input {:type "radio" :class (s/display "inline")}]]))
 
+(defn song [props s a]
+  (fn [props s a]
+    [:div (merge {:class (s/song)
+                  :on-click
+                  (fn []
+                    (player/play-playlist! {:songs        {(s :id) s}
+                                            :albums       (if a {(a :id) a})
+                                            :playlist-idx 0
+                                            :track-order  [(s :id)]}))} props)
+     [:div {:class (s/song-element)} (s :title)]
+     [:div {:class (compose (s/font-size 12) (s/song-element))} (if a (a :title) "Unknown Album")]
+     [:div {:class (compose (s/font-size 12) (s/song-element))} (s :artist)]
+     [:hr {:style {:margin "0"}}]]))
+
 (defn songs []
-  (let [orderby "title"]
-    (req/get-all "song" data/songs orderby))
-  (let [filter-field (r/atom "")]
+  (let [filter-field (r/atom "")
+        orderby "title"
+        songs  (r/atom nil)
+        albums (r/atom nil)]
+    ;; both songs and albums have a :title field
+    (req/get-all "song"  songs orderby)
+    (GET "/edn/album"
+         {:params {:orderby "title"}
+          :handler (fn [response] (reset! albums (reduce (fn [acc v] (conj acc [(v :id) v])) {} ((req/parser response) 0))))})
     (fn []
       [padded-div {:id "songs"}
        [media-options filter-field]
        [:div {:class (compose (s/songs-area))}
         (doall
-         (for [song (let [filter-re-fn (fn [field m] (re-matches
-                                                     (re-pattern (str ".*" (clojure.string/lower-case @filter-field) ".*"))
-                                                     (clojure.string/lower-case (m field))))]
-                      (filter #(or ((partial filter-re-fn :title) %) ((partial filter-re-fn :artist) %)) @data/songs))]
-         [:div {:key (song :id)
-                :class (s/song)
-                :on-click (fn [] (player/play-song! (song :id)))}
-          [:div {:class (s/song-element)} (song :title)]
-          [:div {:class (compose (s/font-size 12) (s/song-element))} (song :artist)]
-          [:hr {:style {:margin "0"}}]]))]])))
+         (for [s (let [filter-re-fn
+                       (fn [field m] (re-matches
+                                     (re-pattern (str ".*" (clojure.string/lower-case @filter-field) ".*"))
+                                     (clojure.string/lower-case (m field))))]
+                   (filter #(or ((partial filter-re-fn :title) %) ((partial filter-re-fn :artist) %)) @songs))]
+           [song {:key (s :id)} s (@albums (s :album))]))]])))
 
 (defn artists []
   (req/get-all "artist" data/artists "name")
@@ -130,10 +147,39 @@
          (@album-info :title)]
         [:div {:class (compose (s/album-buttons) (if @mouse-on? (s/album-buttons-show)))}
          [album-button {:class (compose "la la-bookmark")}]
-         [album-button {:class (compose "la la-play")}]]]])))
+         [album-button {:class (compose "la la-play")
+                        :on-click
+                        (fn []
+                          (let [songs (chan)]
+                            (GET "/edn/song"
+                                 {:params {:data (str {:album (@album-info :id)})}
+                                  :handler (fn [resp]
+                                             (go (>! songs
+                                                     (reduce
+                                                      (fn [acc v] (conj acc [(v :id) v]))
+                                                      {}
+                                                      ((cljs.reader/read-string resp) 0)))))})
+                            (go
+                              (let [songs (<! songs)]
+                                #_((println songs)
+                                   (println @album-info)
+                                   (println @artist-info))
+                                ()
+                                (player/play-playlist!
+                                 {:songs songs
+                                  :albums {(@album-info :id) @album-info}
+                                  :artists {(@artist-info :id) @artist-info}
+                                  :playlist-idx 0
+                                  :track-order (->> songs
+                                                  (reduce (fn [acc v] (conj acc (v 1))) nil)
+                                                  (sort   (fn [v1 v2]
+                                                            (if (<= (v1 :disk) (v1 :disk))
+                                                              (< (v1 :track) (v2 :track))
+                                                              false)))
+                                                  (map    (fn [v] (v :id)))
+                                                  (vec))})))))}]]]])))
 
 (defn albums []
-  ()
   (req/get-all "album" data/albums "title")
   (fn []
     [padded-div {:id "albums"}
@@ -291,7 +337,7 @@
         op-toggle (r/atom nil)]
     (fn []
       [:div {:id "options-toggle"
-             :ref #(reset! op-toggle %)
+             :ref (u/ref-handler op-toggle)
              :class (compose  (s/right))
              :on-click #(toggle-visibility! button-active)}
        [:button {:class (compose (s/navbar-toggle navbar-height))}
@@ -361,4 +407,3 @@
    ;; player
    (when (@data/player :playing)
      [player data/player])])
-

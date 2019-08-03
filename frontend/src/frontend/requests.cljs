@@ -28,18 +28,8 @@
         (GET (str "/" communication-protocol "/" "artist/" (@album-data :artist))
              {:handler (reset-handler artist-data (fn [response] response))})))))
 
-(defn play-song-handler []
-  (fn [response]
-    (swap! data/player assoc :playing true)
-    (swap! data/player assoc :paused false)
-    (let [song-resp (parser response)]
-      (swap! data/player assoc :song song-resp)
-      (when (get-in @data/player [:song :album])
-        (GET (str "/" communication-protocol "/album/" (get-in @data/player [:song :album]))
-             {:handler (fn [response]
-                         ((assoc-in-handler identity data/player [:album]) response)
-                         (GET (str "/" communication-protocol "/artist/" (get-in @data/player [:album :artist]))
-                              {:handler (assoc-in-handler identity data/player [:artist])}))})))))
+
+(get-in @data/player [:album ])
 
 (defn query-unique [table id]
   (GET (str "/" communication-protocol "/" table "/" id)))

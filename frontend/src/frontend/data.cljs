@@ -27,4 +27,7 @@
 (defonce volume (r/atom 1))
 
 (defonce space-char 32)
+
 (defonce player-html (r/atom nil))
+(defonce audio-html (r/atom nil))
+(defonce player-props (r/atom {}))
