@@ -57,7 +57,12 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	serv, err := newServer("host=172.17.0.1 dbname=warbler user=warbler sslmode=disable")
+	host := os.Getenv("POSTGRES_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	serv, err := newServer("host=" + host + " dbname=warbler user=warbler sslmode=disable")
 	check(err)
 	defer serv.wdb.Close()
 

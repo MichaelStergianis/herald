@@ -19,7 +19,7 @@ DB_USER_EXISTS=$(psql -U postgres postgres -tAc "select 1 from pg_roles where ro
 
 if [ -z $DB_USER_EXISTS ]; then
     echo "User warbler does not exist"
-    createuser warbler
+    createuser -U postgres warbler
 else
     echo "User warbler exists."
 fi
